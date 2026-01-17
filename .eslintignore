@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Configuration files
+*.config.js
+.eslintrc.js

@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Logs
+*.log
