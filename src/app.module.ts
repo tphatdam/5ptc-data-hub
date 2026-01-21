@@ -1,6 +1,7 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PdfModule } from './pdf/pdf.module';
 import { AiModule } from './ai/ai.module';
 import { HealthModule } from './health/health.module';
@@ -8,21 +9,58 @@ import { BrevoModule } from './brevo/brevo.module';
 import { QueueModule } from './queue/queue.module';
 import { DailyStockReportModule } from './daily-stock-report/daily-stock-report.module';
 import { DataHubModule } from './data-hub/data-hub.module';
+import { QuotesModule } from './quotes/quotes.module';
+import { ProvidersModule } from './providers/providers.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
+import configuration from './config/configuration';
+import { validate } from './config/validate-env';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      load: [configuration],
+      validate,
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
-      logging: false,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>('app.nodeEnv');
+        const databaseUrl = configService.get<string>('database.url');
+
+        // Base configuration
+        const baseConfig = {
+          type: 'postgres' as const,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          // Disable synchronize for production - use migrations instead
+          synchronize: nodeEnv !== 'production',
+          logging: nodeEnv === 'development',
+        };
+
+        // Option 1: Use DATABASE_URL if provided
+        if (databaseUrl) {
+          return {
+            ...baseConfig,
+            url: databaseUrl,
+          };
+        }
+
+        // Option 2: Use discrete connection parameters
+        return {
+          ...baseConfig,
+          host: configService.get<string>('database.host'),
+          port: configService.get<number>('database.port'),
+          username: configService.get<string>('database.username'),
+          password: configService.get<string>('database.password'),
+          database: configService.get<string>('database.database'),
+        };
+      },
     }),
+    // Configure ScheduleModule for cron-based job scheduling
+    ScheduleModule.forRoot(),
     QueueModule,
     BrevoModule,
     PdfModule,
@@ -30,6 +68,9 @@ import { LoggerMiddleware } from './middlewares/logger.middleware';
     HealthModule,
     DailyStockReportModule,
     DataHubModule,
+    QuotesModule,
+    ProvidersModule,
+    IngestionModule,
   ],
 })
 export class AppModule implements NestModule {
