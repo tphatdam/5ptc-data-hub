@@ -91,6 +91,7 @@ const jobs = [
     TypeOrmModule,
     ...services,
     ...providers,
+    ...jobs,
   ],
 })
 export class DataHubModule {}

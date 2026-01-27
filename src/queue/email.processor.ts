@@ -28,7 +28,7 @@ export class EmailProcessor {
       await this.brevoService.sendEmail(to, subject, html);
       console.log(`Email sent successfully to ${to}`);
       return { success: true, recipient: to };
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to send email to ${to}:`, error);
       await job.moveToFailed({ message: error.message }, true);
       throw error;
@@ -45,7 +45,7 @@ export class EmailProcessor {
       await this.brevoService.sendEmailWithTemplate(to, templateId, params);
       console.log(`Template email sent successfully to ${to}`);
       return { success: true, recipient: to, templateId };
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to send template email to ${to}:`, error);
       await job.moveToFailed({ message: error.message }, true);
       throw error;

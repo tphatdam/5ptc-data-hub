@@ -213,7 +213,7 @@ export class UpsertService {
       }
 
       await queryRunner.commitTransaction();
-    } catch (error) {
+    } catch (error: any) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Batch upsert failed for ${tableName}: ${error.message}`);
       throw error;

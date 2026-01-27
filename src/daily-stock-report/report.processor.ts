@@ -170,7 +170,7 @@ export class ReportProcessor {
             );
             
             return buffer;
-          } catch (error) {
+          } catch (error: any) {
             const errorName = error.name || "Error";
             const errorMessage = error.message || "Unknown error";
 
@@ -271,7 +271,7 @@ export class ReportProcessor {
         `[ReportProcessor][Job:${jobId}] ========== JOB COMPLETED SUCCESSFULLY in ${totalDuration}ms ==========`,
       );
       return { success: true, url: pdfUrl };
-    } catch (error) {
+    } catch (error: any) {
       const totalDuration = Date.now() - jobStartTime;
       console.error(
         `[ReportProcessor][Job:${jobId}] ========== JOB FAILED after ${totalDuration}ms ==========`,
@@ -384,7 +384,7 @@ export class ReportProcessor {
         `[ReportProcessor][API] Notification sent successfully in ${apiDuration}ms - Stock: ${stock}, Email: ${email}, Status: ${response.status}, Response:`,
         JSON.stringify(response.data),
       );
-    } catch (error) {
+    } catch (error: any) {
       // Revert the claim so retries can resend the notification
       console.error(
         `[ReportProcessor][API] API call failed - reverting claim to allow retries - Stock: ${stock}, Email: ${email}, Error:`,

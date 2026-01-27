@@ -572,7 +572,7 @@ export class StockReportHTMLGeneratorService {
     if (data.executive_summary) {
       html += "<h3>Tóm Tắt Điều Hành</h3>";
       if (Array.isArray(data.executive_summary.paragraphs)) {
-        data.executive_summary.paragraphs.forEach((p) => {
+        data.executive_summary.paragraphs.forEach((p: any) => {
           html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
         });
       }
@@ -583,7 +583,7 @@ export class StockReportHTMLGeneratorService {
         data.executive_summary.focus_points.length > 0
       ) {
         html += '<div class="focus-points"><strong>Điểm Chú Ý:</strong><ul>';
-        data.executive_summary.focus_points.forEach((point) => {
+        data.executive_summary.focus_points.forEach((point: any) => {
           html += `<li style="margin-left: 12px;">${this.escapeHtml(point)}</li>`;
         });
         html += "</ul></div>";
@@ -596,18 +596,18 @@ export class StockReportHTMLGeneratorService {
       data.segment_analysis.length > 0
     ) {
       html += '<h3 style="margin-top: 30px;">Phân Tích Theo Mảng</h3>';
-      data.segment_analysis.forEach((segment) => {
+      data.segment_analysis.forEach((segment: any) => {
         const trendClass = `trend-${segment.trend || "unknown"}`;
         const paragraphsHtml = Array.isArray(segment.paragraphs)
           ? segment.paragraphs
-              .map((p) => `<div class="paragraph">${this.escapeHtml(p)}</div>`)
+              .map((p: any) => `<div class="paragraph">${this.escapeHtml(p)}</div>`)
               .join("")
           : "";
         const driversHtml =
           segment.key_drivers &&
           Array.isArray(segment.key_drivers) &&
           segment.key_drivers.length > 0
-            ? `<div style="margin-top: 10px;"><strong>Yếu Tố Chính:</strong></div><ul>${segment.key_drivers.map((d) => `<li style="margin-left: 12px;">${this.escapeHtml(d)}</li>`).join("")}</ul>`
+            ? `<div style="margin-top: 10px;"><strong>Yếu Tố Chính:</strong></div><ul>${segment.key_drivers.map((d: any) => `<li style="margin-left: 12px;">${this.escapeHtml(d)}</li>`).join("")}</ul>`
             : "";
 
         html += `
@@ -626,7 +626,7 @@ export class StockReportHTMLGeneratorService {
     if (data.industry_context) {
       html += '<h3 style="margin-top: 30px;">Bối Cảnh Ngành</h3>';
       if (Array.isArray(data.industry_context.paragraphs)) {
-        data.industry_context.paragraphs.forEach((p) => {
+        data.industry_context.paragraphs.forEach((p: any) => {
           html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
         });
       }
@@ -637,7 +637,7 @@ export class StockReportHTMLGeneratorService {
         data.industry_context.macro_factors.length > 0
       ) {
         html += '<div class="focus-points"><strong>Yếu Tố Vĩ Mô:</strong><ul>';
-        data.industry_context.macro_factors.forEach((factor) => {
+        data.industry_context.macro_factors.forEach((factor: any) => {
           html += `<li style="margin-left: 12px;">${this.escapeHtml(factor)}</li>`;
         });
         html += "</ul></div>";
@@ -649,7 +649,7 @@ export class StockReportHTMLGeneratorService {
       Array.isArray(data.financial_charts) &&
       data.financial_charts.length > 0
     ) {
-      data.financial_charts.forEach((chart, idx) => {
+      data.financial_charts.forEach((chart: any, idx: any) => {
         if (this.hasChartData(chart)) {
           html += `
             <div class="chart-container">
@@ -677,7 +677,7 @@ export class StockReportHTMLGeneratorService {
       '<div class="section"><div class="section-title">3. Phân Tích Tài Chính</div>';
 
     if (data.paragraphs && Array.isArray(data.paragraphs)) {
-      data.paragraphs.forEach((p) => {
+      data.paragraphs.forEach((p: any) => {
         html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
       });
     }
@@ -719,7 +719,7 @@ export class StockReportHTMLGeneratorService {
         data.risk_assessment.paragraphs &&
         Array.isArray(data.risk_assessment.paragraphs)
       ) {
-        data.risk_assessment.paragraphs.forEach((p) => {
+        data.risk_assessment.paragraphs.forEach((p: any) => {
           html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
         });
       }
@@ -730,7 +730,7 @@ export class StockReportHTMLGeneratorService {
         data.risk_assessment.risk_flags.length > 0
       ) {
         html += '<div class="risk-flags"><strong>Cảnh Báo:</strong><ul>';
-        data.risk_assessment.risk_flags.forEach((flag) => {
+        data.risk_assessment.risk_flags.forEach((flag: any) => {
           html += `<li style="margin-left: 12px;">${this.escapeHtml(flag)}</li>`;
         });
         html += "</ul></div>";
@@ -742,7 +742,7 @@ export class StockReportHTMLGeneratorService {
       Array.isArray(data.financial_charts) &&
       data.financial_charts.length > 0
     ) {
-      data.financial_charts.forEach((chart, idx) => {
+      data.financial_charts.forEach((chart: any, idx: any) => {
         if (this.hasChartData(chart)) {
           html += `
             <div class="chart-container">
@@ -768,7 +768,7 @@ export class StockReportHTMLGeneratorService {
       '<div class="section"><div class="section-title">4. Định Giá & Triển Vọng</div>';
 
     if (data.valuation_paragraphs && Array.isArray(data.valuation_paragraphs)) {
-      data.valuation_paragraphs.forEach((p) => {
+      data.valuation_paragraphs.forEach((p: any) => {
         html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
       });
     }
@@ -779,13 +779,13 @@ export class StockReportHTMLGeneratorService {
       data.valuation_scenarios.length > 0
     ) {
       html += '<h3 style="margin-top: 30px;">Kịch Bản Định Giá</h3>';
-      data.valuation_scenarios.forEach((scenario) => {
-        const sentimentMap = {
+      data.valuation_scenarios.forEach((scenario: any) => {
+        const sentimentMap: Record<string, { class: string; label: string }> = {
           "tiêu cực": { class: "negative", label: "Tiêu Cực" },
           "trung lập": { class: "neutral", label: "Trung Lập" },
           "tích cực": { class: "positive", label: "Tích Cực" },
         };
-        const sentiment = sentimentMap[scenario.sentiment] || {
+        const sentiment = sentimentMap[String(scenario.sentiment || "").toLowerCase()] || {
           class: "neutral",
           label: scenario.sentiment,
         };
@@ -793,7 +793,7 @@ export class StockReportHTMLGeneratorService {
           scenario.assumptions &&
           Array.isArray(scenario.assumptions) &&
           scenario.assumptions.length > 0
-            ? `<div style="margin-top: 10px;"><strong>Giả Định:</strong></div><ul style="margin-top: 5px;">${scenario.assumptions.map((a) => `<li style="margin-left: 12px;">${this.escapeHtml(a)}</li>`).join("")}</ul>`
+            ? `<div style="margin-top: 10px;"><strong>Giả Định:</strong></div><ul style="margin-top: 5px;">${scenario.assumptions.map((a: any) => `<li style="margin-left: 12px;">${this.escapeHtml(a)}</li>`).join("")}</ul>`
             : "";
 
         const price = this.parseNumericValue(
@@ -830,7 +830,7 @@ export class StockReportHTMLGeneratorService {
     ) {
       html += '<h3 style="margin-top: 30px;">Yếu Tố Hỗ Trợ</h3>';
       html += '<div class="focus-points"><ul>';
-      data.catalysts.forEach((catalyst) => {
+      data.catalysts.forEach((catalyst: any) => {
         html += `<li style="margin-left: 12px;">${this.escapeHtml(catalyst)}</li>`;
       });
       html += "</ul></div>";
@@ -843,7 +843,7 @@ export class StockReportHTMLGeneratorService {
     ) {
       html += '<h3 style="margin-top: 20px;">Rủi Ro Chính</h3>';
       html += '<div class="risk-flags"><ul>';
-      data.main_risks.forEach((risk) => {
+      data.main_risks.forEach((risk: any) => {
         html += `<li style="margin-left: 12px;">${this.escapeHtml(risk)}</li>`;
       });
       html += "</ul></div>";
@@ -872,7 +872,7 @@ export class StockReportHTMLGeneratorService {
       '<div class="section"><div class="section-title">5. Kết Luận Đầu Tư</div>';
 
     if (data.recommendation) {
-      const recColors = {
+      const recColors: Record<string, string> = {
         MUA: "#10b981",
         GIỮ: "#6b7280",
         BÁN: "#dc2626",
@@ -908,7 +908,7 @@ export class StockReportHTMLGeneratorService {
     }
 
     if (data.paragraphs && Array.isArray(data.paragraphs)) {
-      data.paragraphs.forEach((p) => {
+      data.paragraphs.forEach((p: any) => {
         html += `<div class="paragraph">${this.escapeHtml(p)}</div>`;
       });
     }
@@ -920,7 +920,7 @@ export class StockReportHTMLGeneratorService {
     ) {
       html += '<h3 style="margin-top: 30px;">Lý Do Chính</h3>';
       html += '<div class="focus-points"><ul>';
-      data.top_reasons.forEach((reason) => {
+      data.top_reasons.forEach((reason: any) => {
         html += `<li style="margin-left: 12px;">${this.escapeHtml(reason)}</li>`;
       });
       html += "</ul></div>";
@@ -950,7 +950,7 @@ export class StockReportHTMLGeneratorService {
       businessSection.data.financial_charts &&
       Array.isArray(businessSection.data.financial_charts)
     ) {
-      businessSection.data.financial_charts.forEach((chart, idx) => {
+      businessSection.data.financial_charts.forEach((chart: any, idx: any) => {
         if (this.hasChartData(chart)) {
           chartCount += 1;
           scripts += this.generateChartJS(`chart_business_${idx}`, chart);
@@ -967,7 +967,7 @@ export class StockReportHTMLGeneratorService {
       financialSection.data.financial_charts &&
       Array.isArray(financialSection.data.financial_charts)
     ) {
-      financialSection.data.financial_charts.forEach((chart, idx) => {
+      financialSection.data.financial_charts.forEach((chart: any, idx: any) => {
         if (this.hasChartData(chart)) {
           chartCount += 1;
           scripts += this.generateChartJS(`chart_financial_${idx}`, chart);
@@ -1136,13 +1136,13 @@ export class StockReportHTMLGeneratorService {
     }
 
     return chart.datasets.some(
-      (dataset) =>
+      (dataset: any) =>
         dataset &&
         dataset.data &&
         Array.isArray(dataset.data) &&
         dataset.data.length > 0 &&
         dataset.data.some(
-          (value) => value !== null && value !== undefined && value !== 0,
+          (value: any) => value !== null && value !== undefined && value !== 0,
         ),
     );
   }

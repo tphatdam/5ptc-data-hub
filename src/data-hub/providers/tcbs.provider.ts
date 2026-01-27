@@ -53,7 +53,7 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           const candles = this.aggregateToCandles(ticker, response.data.data, '15m');
           results.push(...candles);
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Failed to fetch intraday data for ${ticker}: ${error.message}`);
       }
     }
@@ -94,7 +94,7 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Failed to fetch daily data for ${ticker}: ${error.message}`);
       }
     }
@@ -139,7 +139,7 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Failed to fetch index data for ${indexCode}: ${error.message}`);
       }
     }
@@ -168,7 +168,7 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
             sharesOut: data.sharesOutstanding ?? undefined,
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Failed to fetch snapshot for ${ticker}: ${error.message}`);
       }
     }
@@ -195,7 +195,7 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to fetch symbol list: ${error.message}`);
       throw error;
     }

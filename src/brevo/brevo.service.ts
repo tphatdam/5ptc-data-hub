@@ -4,7 +4,7 @@ import * as SibApiV3Sdk from 'sib-api-v3-sdk';
 
 @Injectable()
 export class BrevoService {
-  private apiInstance: SibApiV3Sdk.TransactionalEmailsApi;
+  private apiInstance: any;
   private defaultSenderEmail: string;
   private defaultSenderName: string;
 
@@ -51,7 +51,7 @@ export class BrevoService {
         messageId: result.messageId,
         message: 'Email sent successfully',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending email:', error);
       throw new Error(
         `Failed to send email: ${error.message || 'Unknown error'}`,
@@ -85,7 +85,7 @@ export class BrevoService {
         messageId: result.messageId,
         message: 'Email sent successfully with template',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending email with template:', error);
       throw new Error(
         `Failed to send email with template: ${error.message || 'Unknown error'}`,

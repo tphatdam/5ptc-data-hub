@@ -8,6 +8,22 @@ import { QuoteIntradayRepository, BulkUpsertQuoteIntradayDto } from '../quotes/q
 import { CrawlRunsRepository } from './crawl-runs.repository';
 import { MarketProvider } from '../providers/market-provider.interface';
 import { Symbol } from '../db/entities/symbol.entity';
+import { ForeignTradingDailyRepository } from '../company-data/foreign-trading-daily.repository';
+import { InsiderTradingEventRepository } from '../company-data/insider-trading-event.repository';
+import { StockRelatedPeerRepository } from '../company-data/stock-related-peer.repository';
+import { CompanySubsidiaryRepository } from '../company-data/company-subsidiary.repository';
+import { NewsArticleRepository } from '../company-data/news-article.repository';
+import { CompanyReportRepository } from '../company-data/company-report.repository';
+import { SimplizeService } from '../providers/simplize/simplize.service';
+import {
+  mapForeignTradingToRows,
+  mapInsiderTimelineToRows,
+  mapLatestQuoteToIntraday,
+  mapNewsEventsToArticles,
+  mapRelatedToPeers,
+  mapReportsToRows,
+  mapSubsidiaries,
+} from '../providers/simplize/mappers';
 
 /**
  * IngestionService orchestrates scheduled data collection jobs.
@@ -21,6 +37,13 @@ export class IngestionService implements OnModuleInit {
     private readonly symbolsRepo: SymbolsRepository,
     private readonly quoteDailyRepo: QuoteDailyRepository,
     private readonly quoteIntradayRepo: QuoteIntradayRepository,
+    private readonly foreignTradingDailyRepo: ForeignTradingDailyRepository,
+    private readonly insiderTradingEventRepo: InsiderTradingEventRepository,
+    private readonly stockRelatedPeerRepo: StockRelatedPeerRepository,
+    private readonly companySubsidiaryRepo: CompanySubsidiaryRepository,
+    private readonly newsArticleRepo: NewsArticleRepository,
+    private readonly companyReportRepo: CompanyReportRepository,
+    private readonly simplizeService: SimplizeService,
     private readonly crawlRunsRepo: CrawlRunsRepository,
     @Inject('MarketProvider')
     private readonly provider: MarketProvider,
@@ -33,21 +56,21 @@ export class IngestionService implements OnModuleInit {
    * This allows operators to customize job schedules without code changes.
    */
   onModuleInit() {
-    // Get cron expressions and timezone from configuration with defaults
-    const intradayCron = this.configService.get<string>('schedule.intradayCron') || '*/15 * * * *';
-    const dailyEodCron = this.configService.get<string>('schedule.dailyEodCron') || '5 18 * * *';
+    const quoteHourlyCron =
+      this.configService.get<string>('schedule.quoteHourlyCron') || '0 * * * *';
+    const dailyCompanyCron =
+      this.configService.get<string>('schedule.dailyCompanyCron') || '0 18 * * *';
     const timezone = this.configService.get<string>('schedule.timezone') || 'Asia/Ho_Chi_Minh';
 
     this.logger.log(
-      `Initializing scheduled jobs with cron expressions: intraday="${intradayCron}", dailyEod="${dailyEodCron}", timezone="${timezone}"`,
+      `Initializing scheduled jobs with cron expressions: quoteHourly="${quoteHourlyCron}", dailyCompany="${dailyCompanyCron}", timezone="${timezone}"`,
     );
 
-    // Create and register intraday job
-    const intradayJob = new CronJob(
-      intradayCron,
+    const quoteHourlyJob = new CronJob(
+      quoteHourlyCron,
       () => {
-        this.runIntraday15m().catch((error) => {
-          this.logger.error('Unhandled error in intraday job', error);
+        this.runQuoteHourly().catch((error) => {
+          this.logger.error('Unhandled error in quote-hourly job', error);
         });
       },
       null,
@@ -55,12 +78,11 @@ export class IngestionService implements OnModuleInit {
       timezone,
     );
 
-    // Create and register daily EOD job
-    const dailyEodJob = new CronJob(
-      dailyEodCron,
+    const dailyCompanyJob = new CronJob(
+      dailyCompanyCron,
       () => {
-        this.runDailyEOD().catch((error) => {
-          this.logger.error('Unhandled error in daily EOD job', error);
+        this.runDailyCompany().catch((error) => {
+          this.logger.error('Unhandled error in daily-company job', error);
         });
       },
       null,
@@ -68,11 +90,210 @@ export class IngestionService implements OnModuleInit {
       timezone,
     );
 
-    // Register jobs with scheduler registry
-    this.schedulerRegistry.addCronJob('intraday-15m', intradayJob);
-    this.schedulerRegistry.addCronJob('daily-eod', dailyEodJob);
+    this.schedulerRegistry.addCronJob('quote-hourly', quoteHourlyJob);
+    this.schedulerRegistry.addCronJob('daily-company', dailyCompanyJob);
 
     this.logger.log('Scheduled jobs registered successfully');
+  }
+
+  async runQuoteHourly(): Promise<void> {
+    this.logger.log('Starting quote-hourly job');
+
+    await this.executeIngestionJob('quote-hourly', 'SIMPLIZE', async (symbols) => {
+      const now = new Date();
+      const ticks: BulkUpsertQuoteIntradayDto[] = [];
+      let symbolsSucceeded = 0;
+      let errorsCount = 0;
+
+      for (const symbol of symbols) {
+        try {
+          const quote = await this.simplizeService.getLatestQuote(symbol.symbol);
+          ticks.push(mapLatestQuoteToIntraday(quote, symbol.id, now));
+          symbolsSucceeded += 1;
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Failed to fetch latest quote for symbol ${symbol.symbol}: ${errorMessage}`,
+          );
+        }
+      }
+
+      const rowsUpserted = await this.quoteIntradayRepo.bulkUpsert(ticks);
+
+      this.logger.log(
+        `quote-hourly processed ${symbols.length} symbols: succeeded=${symbolsSucceeded}, errors=${errorsCount}, rowsUpserted=${rowsUpserted}`,
+      );
+
+      return { symbolsSucceeded, errorsCount, rowsUpserted };
+    });
+  }
+
+  async runDailyCompany(): Promise<void> {
+    this.logger.log('Starting daily-company job');
+
+    await this.executeIngestionJob('daily-company', 'SIMPLIZE', async (symbols) => {
+      const now = new Date();
+      const rowsUpsertedByTable: Record<string, number> = {
+        foreign_trading_daily: 0,
+        insider_trading_events: 0,
+        stock_related_peers: 0,
+        company_subsidiaries: 0,
+        news_articles: 0,
+        company_reports: 0,
+      };
+
+      const reportTypes = this.configService.get<string[]>('simplize.reportTypes') || [];
+      const newsTypeIds = this.configService.get<string[]>('simplize.newsTypeIds') || [];
+
+      let errorsCount = 0;
+
+      for (const symbol of symbols) {
+        try {
+          const foreignPayload = await this.simplizeService.getForeignTrading(symbol.symbol);
+          const foreignRows = mapForeignTradingToRows(foreignPayload, symbol.id);
+          rowsUpsertedByTable.foreign_trading_daily +=
+            await this.foreignTradingDailyRepo.bulkUpsert(foreignRows);
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Failed foreign trading for symbol ${symbol.symbol}: ${errorMessage}`,
+          );
+        }
+
+        try {
+          const insiderPayload = await this.simplizeService.getInsiderTimeline(symbol.symbol);
+          const insiderRows = mapInsiderTimelineToRows(insiderPayload, symbol.id);
+          rowsUpsertedByTable.insider_trading_events +=
+            await this.insiderTradingEventRepo.bulkUpsert(insiderRows);
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Failed insider timeline for symbol ${symbol.symbol}: ${errorMessage}`,
+          );
+        }
+
+        try {
+          const relatedPayload = await this.simplizeService.getRelatedCompanies(symbol.symbol);
+          const peerRows = mapRelatedToPeers(relatedPayload, symbol.id);
+          rowsUpsertedByTable.stock_related_peers +=
+            await this.stockRelatedPeerRepo.bulkUpsert(peerRows);
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Failed related peers for symbol ${symbol.symbol}: ${errorMessage}`,
+          );
+        }
+
+        try {
+          const subsidiariesPayload = await this.simplizeService.getSubCompanies(symbol.symbol);
+          const subsidiariesRows = mapSubsidiaries(subsidiariesPayload, symbol.id);
+          rowsUpsertedByTable.company_subsidiaries +=
+            await this.companySubsidiaryRepo.bulkUpsert(subsidiariesRows);
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(
+            `Failed subsidiaries for symbol ${symbol.symbol}: ${errorMessage}`,
+          );
+        }
+
+        try {
+          const allNewsRows: any[] = [];
+          const pageSize = 100;
+
+          for (const typeId of newsTypeIds) {
+            let page = 0;
+            let triedPage1Fallback = false;
+
+            for (;;) {
+              const payload = await this.simplizeService.getNewsEvents(
+                symbol.symbol,
+                typeId,
+                page,
+                pageSize,
+              );
+              const list = this.extractList(payload);
+              if (list.length === 0) {
+                if (page === 0 && !triedPage1Fallback) {
+                  page = 1;
+                  triedPage1Fallback = true;
+                  continue;
+                }
+                break;
+              }
+              allNewsRows.push(...mapNewsEventsToArticles(payload, symbol.symbol, now));
+              if (list.length < pageSize) {
+                break;
+              }
+              page += 1;
+            }
+          }
+
+          rowsUpsertedByTable.news_articles += await this.newsArticleRepo.bulkUpsert(
+            allNewsRows as any,
+          );
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(`Failed news events for symbol ${symbol.symbol}: ${errorMessage}`);
+        }
+
+        try {
+          const allReportRows: any[] = [];
+          const pageSize = 100;
+
+          for (const reportType of reportTypes) {
+            let page = 0;
+            let triedPage1Fallback = false;
+
+            for (;;) {
+              const payload = await this.simplizeService.getCompanyReports(
+                symbol.symbol,
+                reportType,
+                page,
+                pageSize,
+              );
+              const list = this.extractList(payload);
+              if (list.length === 0) {
+                if (page === 0 && !triedPage1Fallback) {
+                  page = 1;
+                  triedPage1Fallback = true;
+                  continue;
+                }
+                break;
+              }
+              allReportRows.push(...mapReportsToRows(payload, symbol.id, reportType));
+              if (list.length < pageSize) {
+                break;
+              }
+              page += 1;
+            }
+          }
+
+          rowsUpsertedByTable.company_reports += await this.companyReportRepo.bulkUpsert(
+            allReportRows as any,
+          );
+        } catch (error) {
+          errorsCount += 1;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(`Failed reports for symbol ${symbol.symbol}: ${errorMessage}`);
+        }
+      }
+
+      const rowsUpsertedTotal = Object.values(rowsUpsertedByTable).reduce((a, b) => a + b, 0);
+
+      this.logger.log(
+        `daily-company processed ${symbols.length} symbols: errors=${errorsCount}, rowsUpsertedTotal=${rowsUpsertedTotal}, byTable=${JSON.stringify(
+          rowsUpsertedByTable,
+        )}`,
+      );
+
+      return { errorsCount, rowsUpsertedByTable, rowsUpserted: rowsUpsertedTotal };
+    });
   }
 
   /**
@@ -82,7 +303,7 @@ export class IngestionService implements OnModuleInit {
   async runIntraday15m(): Promise<void> {
     this.logger.log('Starting intraday-15m job');
 
-    await this.executeIngestionJob('intraday-15m', async (symbols) => {
+    await this.executeIngestionJob('intraday-15m', this.provider.name, async (symbols) => {
       const allTicks: BulkUpsertQuoteIntradayDto[] = [];
 
       // Fetch intraday data for each symbol
@@ -131,7 +352,7 @@ export class IngestionService implements OnModuleInit {
   async runDailyEOD(): Promise<void> {
     this.logger.log('Starting daily-eod job');
 
-    await this.executeIngestionJob('daily-eod', async (symbols) => {
+    await this.executeIngestionJob('daily-eod', this.provider.name, async (symbols) => {
       const allBars: BulkUpsertQuoteDailyDto[] = [];
       const today = new Date();
 
@@ -187,25 +408,23 @@ export class IngestionService implements OnModuleInit {
    */
   private async executeIngestionJob(
     jobName: string,
-    fetchAndStore: (symbols: Symbol[]) => Promise<{ rowsUpserted: number }>,
+    source: string,
+    fetchAndStore: (symbols: Symbol[]) => Promise<Record<string, any>>,
   ): Promise<void> {
     const startTime = Date.now();
 
-    // Create crawl run record with status RUNNING
     const crawlRun = await this.crawlRunsRepo.createRun({
       jobName,
-      source: this.provider.name,
+      source,
     });
 
     this.logger.log(
-      `Created crawl run ${crawlRun.id} for job ${jobName} from source ${this.provider.name}`,
+      `Created crawl run ${crawlRun.id} for job ${jobName} from source ${source}`,
     );
 
     try {
-      // Load symbols from database
       let symbols = await this.symbolsRepo.getAllActive();
 
-      // If no symbols found, fetch from provider and seed database
       if (symbols.length === 0) {
         this.logger.warn(
           'No symbols found in database, fetching from provider to seed',
@@ -243,29 +462,25 @@ export class IngestionService implements OnModuleInit {
         `Loaded ${symbols.length} active symbols for job ${jobName}`,
       );
 
-      // Fetch and store data using the provided function
-      const { rowsUpserted } = await fetchAndStore(symbols);
+      const resultStats = await fetchAndStore(symbols);
 
-      // Calculate statistics
       const durationMs = Date.now() - startTime;
       const stats = {
         symbolsCount: symbols.length,
-        rowsUpserted,
         durationMs,
+        ...resultStats,
       };
 
-      // Mark crawl run as successful
       await this.crawlRunsRepo.markSuccess(crawlRun.id, stats);
 
       this.logger.log(
-        `Job ${jobName} completed successfully: ${rowsUpserted} rows upserted for ${symbols.length} symbols in ${durationMs}ms`,
+        `Job ${jobName} completed successfully for ${symbols.length} symbols in ${durationMs}ms`,
       );
     } catch (error) {
       const durationMs = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
 
-      // Mark crawl run as failed with error text and partial stats
       await this.crawlRunsRepo.markFailed(crawlRun.id, errorMessage, {
         durationMs,
       });
@@ -278,5 +493,27 @@ export class IngestionService implements OnModuleInit {
       // Re-throw to ensure the error is visible in logs
       throw error;
     }
+  }
+
+  private extractList(payload: any): any[] {
+    if (!payload) {
+      return [];
+    }
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (Array.isArray(payload.data)) {
+      return payload.data;
+    }
+    if (Array.isArray(payload.items)) {
+      return payload.items;
+    }
+    if (payload.data && Array.isArray(payload.data.items)) {
+      return payload.data.items;
+    }
+    if (payload.data && Array.isArray(payload.data.data)) {
+      return payload.data.data;
+    }
+    return [];
   }
 }

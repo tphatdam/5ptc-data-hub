@@ -40,7 +40,7 @@ export abstract class BaseJob {
           const items = await executor();
           await this.jobRunService.finishJob(context, JobStatus.SUCCESS, items);
           return { skipped: false, items };
-        } catch (error) {
+        } catch (error: any) {
           await this.jobRunService.finishJob(
             context,
             JobStatus.FAIL,

@@ -9,7 +9,7 @@ export class PdfService {
   private readonly apiUrl = 'https://api.html2pdfrocket.com/pdf';
 
   constructor(private configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('HTML2PDFROCKET_API_KEY');
+    this.apiKey = this.configService.get<string>('HTML2PDFROCKET_API_KEY') || '';
     if (!this.apiKey) {
       this.logger.error('HTML2PDFROCKET_API_KEY is not configured');
       throw new Error('HTML2PDFROCKET_API_KEY environment variable is required');

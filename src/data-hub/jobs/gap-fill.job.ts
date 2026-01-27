@@ -99,7 +99,7 @@ export class GapFillJob extends BaseJob {
         }
 
         consecutiveFailures = 0;
-      } catch (error) {
+      } catch (error: any) {
         consecutiveFailures++;
         this.logger.warn(`Failed to fill gaps for ${symbol.ticker}: ${error.message}`);
       }

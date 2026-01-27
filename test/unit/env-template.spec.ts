@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+envimport * as fs from 'fs';
 import * as path from 'path';
 
 describe('Environment Template Configuration', () => {

@@ -47,7 +47,7 @@ export class AiController {
         answers: result.answers,
         conversationID: result.conversationID,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI endpoint error:', error);
       throw new HttpException(
         {

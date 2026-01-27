@@ -101,7 +101,7 @@ export class DailyStockReportService {
       void (async () => {
         try {
           await this.notifyApiAboutCachedReport(email, normalizedStock, pdfUrl);
-        } catch (error) {
+        } catch (error: any) {
           // Comprehensive error logging including axios metadata
           let errorDetails = error.message || "Unknown error";
           if (error.response) {
@@ -313,7 +313,7 @@ export class DailyStockReportService {
       })
       .execute();
 
-    const claimed = result.affected > 0;
+    const claimed = (result.affected ?? 0) > 0;
 
     this.logger.log(
       `[DailyStockReportService] Atomic claim result - Stock: ${normalizedStock}, Claimed: ${claimed}, Rows affected: ${result.affected}`,
@@ -472,11 +472,9 @@ export class DailyStockReportService {
     const createStart = Date.now();
     const placeholder = this.dailyStockReportRepository.create({
       stock: normalizedStock,
-      reportDate: todayDateString as unknown as Date,
       url: null,
-      content: null,
       notificationSent: false,
-      investmentRecommendation: null,
+      reportDate: new Date(todayDateString),
     });
 
     await this.dailyStockReportRepository.save(placeholder);

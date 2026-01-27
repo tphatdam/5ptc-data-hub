@@ -240,7 +240,7 @@ export class StockReportService {
                 if (this.validateSectionSchema(parsed, sectionId)) {
                   return parsed;
                 }
-              } catch (e) {
+              } catch (e: any) {
                 console.log(`Strategy 1 parse attempt failed: ${e.message}`);
                 continue;
               }
@@ -262,7 +262,7 @@ export class StockReportService {
             if (this.validateSectionSchema(parsed, sectionId)) {
               return parsed;
             }
-          } catch (e) {
+          } catch (e: any) {
             console.log(`Strategy 2 parse attempt failed: ${e.message}`);
             return null;
           }
@@ -278,7 +278,7 @@ export class StockReportService {
             if (this.validateSectionSchema(parsed, sectionId)) {
               return parsed;
             }
-          } catch (e) {
+          } catch (e: any) {
             console.log(`Strategy 3 parse attempt failed: ${e.message}`);
             return null;
           }
@@ -296,7 +296,7 @@ export class StockReportService {
           );
           return result;
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log(`Strategy ${i + 1} execution error: ${e.message}`);
         continue;
       }
@@ -536,7 +536,7 @@ export class StockReportService {
         try {
           parsedData = JSON.parse(response.answers);
           console.log(`✓ Direct JSON parse succeeded for ${promptConfig.id}`);
-        } catch (parseError) {
+        } catch (parseError: any) {
           console.log(
             `Direct JSON parse failed for section ${promptConfig.id}: ${parseError.message}`,
           );
@@ -563,7 +563,7 @@ export class StockReportService {
         });
 
         console.log(`✓ Section ${promptConfig.id} completed`);
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error generating section ${promptConfig.id}:`, error);
 
         const fallbackData = this.getFallbackData(promptConfig.id, stockCode);

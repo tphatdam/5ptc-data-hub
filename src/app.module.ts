@@ -12,6 +12,7 @@ import { DataHubModule } from './data-hub/data-hub.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { ProvidersModule } from './providers/providers.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { TriggerModule } from './trigger/trigger.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
 import { validate } from './config/validate-env';
@@ -71,6 +72,7 @@ import { validate } from './config/validate-env';
     QuotesModule,
     ProvidersModule,
     IngestionModule,
+    TriggerModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -33,7 +33,7 @@ export class BrevoController {
         statusCode: HttpStatus.OK,
         ...result,
       };
-    } catch (error) {
+    } catch (error: any) {
       throw new HttpException(
         error.message || 'Failed to send email',
         HttpStatus.INTERNAL_SERVER_ERROR,

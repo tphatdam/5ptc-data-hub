@@ -20,7 +20,7 @@ export class AdvisoryLockService {
         this.logger.debug(`Failed to acquire advisory lock: ${lockName} (already held)`);
       }
       return acquired;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error acquiring advisory lock ${lockName}: ${error.message}`);
       return false;
     }
@@ -39,7 +39,7 @@ export class AdvisoryLockService {
         this.logger.warn(`Lock ${lockName} was not held or already released`);
       }
       return released;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Error releasing advisory lock ${lockName}: ${error.message}`);
       return false;
     }

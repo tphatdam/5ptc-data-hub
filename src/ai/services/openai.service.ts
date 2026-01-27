@@ -39,7 +39,7 @@ export class OpenAIService {
     if (!this.conversationHistories.has(conversationID)) {
       this.conversationHistories.set(conversationID, []);
     }
-    return this.conversationHistories.get(conversationID);
+    return this.conversationHistories.get(conversationID) || [];
   }
 
   private addToConversationHistory(
@@ -70,7 +70,7 @@ export class OpenAIService {
     conversationID: string = '',
     maxRetries: number = 1,
   ): Promise<AIResponse> {
-    let lastError: Error;
+    let lastError: Error = new Error('Unknown error');
 
     // If external AI is not configured, use official OpenAI immediately.
     if (!this.externalApiEnabled) {
@@ -92,10 +92,11 @@ export class OpenAIService {
 
         return result;
       } catch (error) {
-        lastError = error;
-        console.error(`✗ External AI API attempt ${attempt} failed: ${error.message}`);
+        const err = error instanceof Error ? error : new Error(String(error));
+        lastError = err;
+        console.error(`✗ External AI API attempt ${attempt} failed: ${err.message}`);
         // If connect timeout occurs, fallback immediately to official API when available.
-        const message = String(error?.message || '').toUpperCase();
+        const message = String(err.message || '').toUpperCase();
         const isConnectTimeout = message.includes('UND_ERR_CONNECT_TIMEOUT') || message.includes('FETCH FAILED');
         if (isConnectTimeout && this.configService.get<string>('OPENAI_API_KEY')) {
           console.log('Network/connect timeout detected; falling back to OpenAI official API.');
@@ -104,10 +105,13 @@ export class OpenAIService {
             console.log('✓ OpenAI official API fallback succeeded');
             this.addToConversationHistory(result.conversationID, prompt, result.answers);
             return result;
-          } catch (fallbackError) {
-            console.error('✗ OpenAI official API fallback also failed:', fallbackError.message);
+          } catch (fallbackError: any) {
+            console.error(
+              '✗ OpenAI official API fallback also failed:',
+              fallbackError?.message || String(fallbackError),
+            );
             throw new Error(
-              `All API attempts failed. External: ${lastError.message}, OpenAI fallback: ${fallbackError.message}`,
+              `All API attempts failed. External: ${lastError.message}, OpenAI fallback: ${fallbackError?.message || String(fallbackError)}`,
             );
           }
         }
@@ -135,13 +139,13 @@ export class OpenAIService {
         );
 
         return result;
-      } catch (fallbackError) {
+      } catch (fallbackError: any) {
         console.error(
           '✗ OpenAI official API fallback also failed:',
-          fallbackError.message,
+          fallbackError?.message || String(fallbackError),
         );
         throw new Error(
-          `All API attempts failed. External: ${lastError.message}, OpenAI fallback: ${fallbackError.message}`,
+          `All API attempts failed. External: ${lastError.message}, OpenAI fallback: ${fallbackError?.message || String(fallbackError)}`,
         );
       }
     }
@@ -185,7 +189,7 @@ export class OpenAIService {
       let result;
       try {
         result = JSON.parse(responseText);
-      } catch (jsonError) {
+      } catch (jsonError: any) {
         console.error(
           'Failed to parse API response as JSON:',
           jsonError.message,
@@ -211,7 +215,7 @@ export class OpenAIService {
         answers: result.data.answers,
         conversationID: result.data.conversationID || '',
       };
-    } catch (error) {
+    } catch (error: any) {
       // Enhance logging to include endpoint and error cause for easier diagnostics.
       console.error('OpenAI Service Error:', {
         endpoint: this.externalApiUrl,
@@ -264,10 +268,10 @@ export class OpenAIService {
       }
 
       return {
-        answers: completion.choices[0].message.content,
+        answers: completion.choices[0].message.content || '',
         conversationID: conversationID,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('OpenAI Official API Error:', error);
       throw new Error(`Failed to get response from OpenAI: ${error.message}`);
     }

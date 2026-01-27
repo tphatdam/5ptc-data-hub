@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { JobRun } from '../entities';
 import { JobStatus } from '../enums';
 
@@ -33,7 +33,7 @@ export class JobRunService {
     }
 
     this.runningJobs.set(jobName, true);
-    const runId = uuidv4();
+    const runId = randomUUID();
     const startedAt = new Date();
 
     this.logger.log(`[${runId}] Starting job: ${jobName}`);
@@ -73,7 +73,7 @@ export class JobRunService {
         `[${context.runId}] Job ${context.jobName} finished with status ${status}, ` +
           `items: ${items}, duration: ${duration}ms`
       );
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(
         `[${context.runId}] Failed to save job run: ${err.message}`
       );
@@ -83,7 +83,7 @@ export class JobRunService {
   }
 
   async recordSkip(jobName: string, reason: string): Promise<void> {
-    const runId = uuidv4();
+    const runId = randomUUID();
     const now = new Date();
 
     try {
@@ -99,7 +99,7 @@ export class JobRunService {
 
       await this.jobRunRepository.save(jobRun);
       this.logger.log(`[${runId}] Job ${jobName} skipped: ${reason}`);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`Failed to record skip for ${jobName}: ${err.message}`);
     }
   }

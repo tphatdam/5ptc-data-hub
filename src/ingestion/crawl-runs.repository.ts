@@ -8,11 +8,7 @@ export interface CreateRunDto {
   source: string;
 }
 
-export interface CrawlRunStats {
-  symbolsCount: number;
-  rowsUpserted: number;
-  durationMs: number;
-}
+export type CrawlRunStats = Record<string, any>;
 
 @Injectable()
 export class CrawlRunsRepository {

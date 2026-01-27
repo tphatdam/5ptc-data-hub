@@ -7,6 +7,8 @@ import { CrawlRun } from '../db/entities/crawl-run.entity';
 import { SymbolsModule } from '../symbols/symbols.module';
 import { QuotesModule } from '../quotes/quotes.module';
 import { ProvidersModule } from '../providers/providers.module';
+import { CompanyDataModule } from '../company-data/company-data.module';
+import { SimplizeModule } from '../providers/simplize/simplize.module';
 
 /**
  * IngestionModule provides scheduled data collection jobs.
@@ -19,6 +21,8 @@ import { ProvidersModule } from '../providers/providers.module';
     SymbolsModule,
     QuotesModule,
     ProvidersModule,
+    CompanyDataModule,
+    SimplizeModule,
   ],
   providers: [IngestionService, CrawlRunsRepository],
   exports: [IngestionService, CrawlRunsRepository],

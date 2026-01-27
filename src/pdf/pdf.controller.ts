@@ -76,7 +76,7 @@ export class PdfController {
       res.setHeader('Content-Length', pdfBuffer.length.toString());
 
       res.send(pdfBuffer);
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
       console.error('PDF generation error:', error);
 
@@ -153,7 +153,7 @@ export class PdfController {
       res.setHeader('Content-Length', pdfBuffer.length.toString());
 
       res.send(pdfBuffer);
-    } catch (error) {
+    } catch (error: any) {
       clearTimeout(timeoutId);
       console.error('Stock report generation error:', error);
 
@@ -206,7 +206,7 @@ LƯU Ý: ${body.stock_code} là mã cổ phiếu VIỆT NAM (VD: VIC = Vingroup,
         parsedData = JSON.parse(result.answers);
         parseMethod = 'direct';
         console.log('\n✓ Direct JSON parse succeeded');
-      } catch (e) {
+      } catch (e: any) {
         console.log('\n✗ Direct JSON parse failed:', e.message);
         parseMethod = 'extraction';
       }
@@ -219,7 +219,7 @@ LƯU Ý: ${body.stock_code} là mã cổ phiếu VIỆT NAM (VD: VIC = Vingroup,
         parsedData,
         conversationID: result.conversationID,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('\n=== VALUATION TEST ERROR ===');
       console.error('Error:', error.message);
       console.error('Stack:', error.stack);

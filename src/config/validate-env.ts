@@ -74,6 +74,10 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(100)
   HTTP_RETRY_BASE_MS?: number;
+
+  @IsOptional()
+  @IsString()
+  INTERNAL_API_KEY?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

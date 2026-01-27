@@ -25,13 +25,13 @@ export class DailyStockReportEntity {
   reportDate: Date;
 
   @Column({ type: 'text', nullable: true })
-  content: string;
+  content: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   url: string | null; // Now stores PDF URL instead of HTML URL, nullable for placeholder rows
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  pdfUrl: string; // Deprecated - kept for backwards compatibility
+  pdfUrl: string | null; // Deprecated - kept for backwards compatibility
 
   @Column({ type: 'boolean', default: false })
   notificationSent: boolean;

@@ -14,7 +14,7 @@ export class S3Service {
     const secretAccessKey = this.configService.get<string>(
       'AWS_SECRET_ACCESS_KEY',
     );
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME');
+    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME') || '';
 
     if (!accessKeyId || !secretAccessKey || !this.bucketName) {
       console.warn(
@@ -56,7 +56,7 @@ export class S3Service {
 
       const fileUrl = `https://${this.bucketName}.s3.amazonaws.com/${key}`;
       return fileUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file to S3:', error);
       throw new Error(`Failed to upload file to S3: ${error.message}`);
     }

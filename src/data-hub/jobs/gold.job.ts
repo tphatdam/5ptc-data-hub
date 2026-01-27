@@ -64,7 +64,7 @@ export class GoldJob extends BaseJob {
           ]);
           totalItems += result.inserted + result.updated;
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Failed to fetch gold price for ${goldProvider}: ${error.message}`);
       }
     }
