@@ -44,9 +44,9 @@ async function bootstrap() {
   const port = process.env.PORT || 5000;
   await app.listen(port, '0.0.0.0');
 
-  console.log(`PDF Generator service running on port ${port}`);
-  console.log(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
-  console.log('Server ready - browser will initialize on first PDF request');
+  strapi.log.info(`PDF Generator service running on port ${port}`);
+  strapi.log.info(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
+  strapi.log.info('Server ready - browser will initialize on first PDF request');
 }
 
 bootstrap();

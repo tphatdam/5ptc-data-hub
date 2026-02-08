@@ -7,7 +7,7 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
   const dataSourceRepository = dataSource.getRepository(DataSource);
   const marketIndexRepository = dataSource.getRepository(MarketIndex);
 
-  console.log('Seeding exchanges...');
+  strapi.log.info('Seeding exchanges...');
   const exchanges = [
     { code: 'HOSE', name: 'Ho Chi Minh Stock Exchange' },
     { code: 'HNX', name: 'Hanoi Stock Exchange' },
@@ -20,14 +20,14 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     if (!existing) {
       const saved = await exchangeRepository.save(exchangeRepository.create(exchange));
       savedExchanges.push(saved);
-      console.log(`  Created exchange: ${exchange.code}`);
+      strapi.log.info(`  Created exchange: ${exchange.code}`);
     } else {
       savedExchanges.push(existing);
-      console.log(`  Exchange exists: ${exchange.code}`);
+      strapi.log.info(`  Exchange exists: ${exchange.code}`);
     }
   }
 
-  console.log('Seeding market indices...');
+  strapi.log.info('Seeding market indices...');
   const exchangeMap = new Map(savedExchanges.map((e) => [e.code, e.id]));
   
   const indices = [
@@ -47,13 +47,13 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
           exchangeId: exchangeMap.get(index.exchangeCode),
         })
       );
-      console.log(`  Created index: ${index.code}`);
+      strapi.log.info(`  Created index: ${index.code}`);
     } else {
-      console.log(`  Index exists: ${index.code}`);
+      strapi.log.info(`  Index exists: ${index.code}`);
     }
   }
 
-  console.log('Seeding data sources...');
+  strapi.log.info('Seeding data sources...');
   const dataSources = [
     {
       code: 'TCBS_API',
@@ -97,11 +97,11 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     const existing = await dataSourceRepository.findOne({ where: { code: ds.code } });
     if (!existing) {
       await dataSourceRepository.save(dataSourceRepository.create(ds));
-      console.log(`  Created data source: ${ds.code}`);
+      strapi.log.info(`  Created data source: ${ds.code}`);
     } else {
-      console.log(`  Data source exists: ${ds.code}`);
+      strapi.log.info(`  Data source exists: ${ds.code}`);
     }
   }
 
-  console.log('Seed completed successfully!');
+  strapi.log.info('Seed completed successfully!');
 }

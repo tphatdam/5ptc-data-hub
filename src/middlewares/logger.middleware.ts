@@ -10,7 +10,7 @@ export class LoggerMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const { statusCode } = res;
       const responseTime = Date.now() - startTime;
-      console.log(
+      strapi.log.info(
         `[${new Date().toISOString()}] ${method} ${originalUrl} ${statusCode} - ${responseTime}ms`,
       );
     });

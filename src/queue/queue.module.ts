@@ -27,14 +27,14 @@ import { BrevoModule } from '../brevo/brevo.module';
               tls: url.protocol === 'rediss:' ? {} : undefined,
               retryStrategy: (times: number) => {
                 const delay = Math.min(Math.pow(2, times) * 100, 5000);
-                console.log(`[QueueModule] Redis connection retry attempt ${times}, waiting ${delay}ms`);
+                strapi.log.info(`[QueueModule] Redis connection retry attempt ${times}, waiting ${delay}ms`);
                 return delay;
               },
               maxRetriesPerRequest: null,
               enableReadyCheck: false,
               enableOfflineQueue: true,
             };
-            console.log(`[QueueModule] Using REDIS_URL configuration - Host: ${redisConfig.host}, Port: ${redisConfig.port}, TLS: ${!!redisConfig.tls}, Prefix: ${prefix}`);
+            strapi.log.info(`[QueueModule] Using REDIS_URL configuration - Host: ${redisConfig.host}, Port: ${redisConfig.port}, TLS: ${!!redisConfig.tls}, Prefix: ${prefix}`);
           } catch (error) {
             console.error('[QueueModule] Failed to parse REDIS_URL:', error);
             throw new Error('Invalid REDIS_URL format');
@@ -50,14 +50,14 @@ import { BrevoModule } from '../brevo/brevo.module';
             password: password || undefined,
             retryStrategy: (times: number) => {
               const delay = Math.min(Math.pow(2, times) * 100, 5000);
-              console.log(`[QueueModule] Redis connection retry attempt ${times}, waiting ${delay}ms`);
+              strapi.log.info(`[QueueModule] Redis connection retry attempt ${times}, waiting ${delay}ms`);
               return delay;
             },
             maxRetriesPerRequest: null,
             enableReadyCheck: false,
             enableOfflineQueue: true,
           };
-          console.log(`[QueueModule] Using REDIS_HOST/PORT configuration - Host: ${host}, Port: ${port}, Prefix: ${prefix}`);
+          strapi.log.info(`[QueueModule] Using REDIS_HOST/PORT configuration - Host: ${host}, Port: ${port}, Prefix: ${prefix}`);
         }
         
         return { 

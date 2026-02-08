@@ -9,7 +9,7 @@ export async function retryStep<T>(
       return await fn();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log(
+      strapi.log.info(
         `${stepName} fail ${attempt}/${maxAttempts}: ${errorMessage}`,
       );
       

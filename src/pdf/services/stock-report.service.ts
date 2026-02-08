@@ -215,11 +215,11 @@ export class StockReportService {
 
   private extractAndRepairJSON(text: any, sectionId: string): any {
     if (typeof text === "object" && text !== null) {
-      console.log("⚠ Text is already an object, validating schema...");
+      strapi.log.info("⚠ Text is already an object, validating schema...");
       if (this.validateSectionSchema(text, sectionId)) {
         return text;
       } else {
-        console.log("❌ Object does not match expected schema");
+        strapi.log.info("❌ Object does not match expected schema");
         return null;
       }
     }
@@ -241,7 +241,7 @@ export class StockReportService {
                   return parsed;
                 }
               } catch (e: any) {
-                console.log(`Strategy 1 parse attempt failed: ${e.message}`);
+                strapi.log.info(`Strategy 1 parse attempt failed: ${e.message}`);
                 continue;
               }
             }
@@ -263,7 +263,7 @@ export class StockReportService {
               return parsed;
             }
           } catch (e: any) {
-            console.log(`Strategy 2 parse attempt failed: ${e.message}`);
+            strapi.log.info(`Strategy 2 parse attempt failed: ${e.message}`);
             return null;
           }
         }
@@ -279,7 +279,7 @@ export class StockReportService {
               return parsed;
             }
           } catch (e: any) {
-            console.log(`Strategy 3 parse attempt failed: ${e.message}`);
+            strapi.log.info(`Strategy 3 parse attempt failed: ${e.message}`);
             return null;
           }
         }
@@ -291,13 +291,13 @@ export class StockReportService {
       try {
         const result = strategies[i](cleanedText);
         if (result) {
-          console.log(
+          strapi.log.info(
             `✓ Successfully extracted JSON for ${sectionId} using strategy ${i + 1}`,
           );
           return result;
         }
       } catch (e: any) {
-        console.log(`Strategy ${i + 1} execution error: ${e.message}`);
+        strapi.log.info(`Strategy ${i + 1} execution error: ${e.message}`);
         continue;
       }
     }
@@ -371,7 +371,7 @@ export class StockReportService {
 
     for (const key of required) {
       if (!(key in parsed)) {
-        console.log(`Missing required key "${key}" for section ${sectionId}`);
+        strapi.log.info(`Missing required key "${key}" for section ${sectionId}`);
         return false;
       }
     }
@@ -396,7 +396,7 @@ export class StockReportService {
             ? Math.round(midpoint)
             : midpoint;
 
-        console.log(`  ✓ Normalized range "${start}...${end}" → ${result}`);
+        strapi.log.info(`  ✓ Normalized range "${start}...${end}" → ${result}`);
         return `: ${result}`;
       },
     );
@@ -413,7 +413,7 @@ export class StockReportService {
       /([:,\[])\s*(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)/g,
       (match, prefix, num1, num2) => {
         const result = parseFloat(num1) * parseFloat(num2);
-        console.log(
+        strapi.log.info(
           `  ✓ Evaluated multiplication "${num1} * ${num2}" → ${result}`,
         );
         return `${prefix} ${result}`;
@@ -424,7 +424,7 @@ export class StockReportService {
       /([:,\[])\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)(?=\s*[,\]\}])/g,
       (match, prefix, num1, num2) => {
         const result = parseFloat(num1) * parseFloat(num2);
-        console.log(
+        strapi.log.info(
           `  ✓ Evaluated implicit multiplication "${num1} ${num2}" → ${result}`,
         );
         return `${prefix} ${result}`;
@@ -516,13 +516,13 @@ export class StockReportService {
     const results: SectionResult[] = [];
     let conversationID = "";
 
-    console.log(`Starting stock report generation for ${stockCode}...`);
+    strapi.log.info(`Starting stock report generation for ${stockCode}...`);
 
     for (let i = 0; i < STOCK_REPORT_PROMPTS.length; i++) {
       const promptConfig = STOCK_REPORT_PROMPTS[i];
       const prompt = promptConfig.template.replace(/{stock_code}/g, stockCode);
 
-      console.log(
+      strapi.log.info(
         `Generating section ${i + 1}/${STOCK_REPORT_PROMPTS.length}: ${promptConfig.id}`,
       );
 
@@ -535,12 +535,12 @@ export class StockReportService {
         let parsedData: any;
         try {
           parsedData = JSON.parse(response.answers);
-          console.log(`✓ Direct JSON parse succeeded for ${promptConfig.id}`);
+          strapi.log.info(`✓ Direct JSON parse succeeded for ${promptConfig.id}`);
         } catch (parseError: any) {
-          console.log(
+          strapi.log.info(
             `Direct JSON parse failed for section ${promptConfig.id}: ${parseError.message}`,
           );
-          console.log(`Attempting multi-strategy extraction...`);
+          strapi.log.info(`Attempting multi-strategy extraction...`);
 
           parsedData = this.extractAndRepairJSON(response.answers, promptConfig.id);
           if (!parsedData) {
@@ -562,7 +562,7 @@ export class StockReportService {
           rawAnswer: response.answers,
         });
 
-        console.log(`✓ Section ${promptConfig.id} completed`);
+        strapi.log.info(`✓ Section ${promptConfig.id} completed`);
       } catch (error: any) {
         console.error(`Error generating section ${promptConfig.id}:`, error);
 
@@ -575,16 +575,16 @@ export class StockReportService {
           isFallback: true,
         });
 
-        console.log(`⚠ Using fallback content for section ${promptConfig.id}`);
+        strapi.log.info(`⚠ Using fallback content for section ${promptConfig.id}`);
       }
 
       if (i < STOCK_REPORT_PROMPTS.length - 1) {
-        console.log(`Waiting ${this.INTER_PROMPT_DELAY_MS}ms before next section...`);
+        strapi.log.info(`Waiting ${this.INTER_PROMPT_DELAY_MS}ms before next section...`);
         await this.delay(this.INTER_PROMPT_DELAY_MS);
       }
     }
 
-    console.log(`Stock report generation completed for ${stockCode}`);
+    strapi.log.info(`Stock report generation completed for ${stockCode}`);
 
     return {
       stockCode,

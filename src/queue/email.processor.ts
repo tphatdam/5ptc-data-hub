@@ -22,11 +22,11 @@ export class EmailProcessor {
   async handleSendEmail(job: Job<SendEmailJobData>) {
     const { to, subject, html } = job.data;
 
-    console.log(`Processing email to ${to} with subject: ${subject}`);
+    strapi.log.info(`Processing email to ${to} with subject: ${subject}`);
 
     try {
       await this.brevoService.sendEmail(to, subject, html);
-      console.log(`Email sent successfully to ${to}`);
+      strapi.log.info(`Email sent successfully to ${to}`);
       return { success: true, recipient: to };
     } catch (error: any) {
       console.error(`Failed to send email to ${to}:`, error);
@@ -39,11 +39,11 @@ export class EmailProcessor {
   async handleSendTemplateEmail(job: Job<SendTemplateEmailJobData>) {
     const { to, templateId, params } = job.data;
 
-    console.log(`Processing template email (ID: ${templateId}) to ${to}`);
+    strapi.log.info(`Processing template email (ID: ${templateId}) to ${to}`);
 
     try {
       await this.brevoService.sendEmailWithTemplate(to, templateId, params);
-      console.log(`Template email sent successfully to ${to}`);
+      strapi.log.info(`Template email sent successfully to ${to}`);
       return { success: true, recipient: to, templateId };
     } catch (error: any) {
       console.error(`Failed to send template email to ${to}:`, error);

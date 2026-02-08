@@ -19,14 +19,14 @@ export class DailyStockReportController {
     @Param('stockCode') stockCode: string,
   ): Promise<DailyStockReportResponseDto> {
     const requestId = `GET_${stockCode}_${Date.now()}`;
-    console.log(`[DailyStockReportController][${requestId}] GET request - Stock: ${stockCode}`);
+    strapi.log.info(`[DailyStockReportController][${requestId}] GET request - Stock: ${stockCode}`);
     
     try {
       const startTime = Date.now();
       const result = await this.dailyStockReportService.getOrCreateToday(stockCode);
       const duration = Date.now() - startTime;
       
-      console.log(`[DailyStockReportController][${requestId}] GET completed in ${duration}ms - Response: ${JSON.stringify(result)}`);
+      strapi.log.info(`[DailyStockReportController][${requestId}] GET completed in ${duration}ms - Response: ${JSON.stringify(result)}`);
       return result;
     } catch (error) {
       console.error(`[DailyStockReportController][${requestId}] GET failed - Stock: ${stockCode}, Error:`, error);
@@ -42,7 +42,7 @@ export class DailyStockReportController {
     @Body() generateReportDto: GenerateReportDto,
   ) {
     const requestId = `${stockCode}_${Date.now()}`;
-    console.log(`[DailyStockReportController][${requestId}] Incoming request - Stock: ${stockCode}, Email: ${generateReportDto.email}`);
+    strapi.log.info(`[DailyStockReportController][${requestId}] Incoming request - Stock: ${stockCode}, Email: ${generateReportDto.email}`);
     
     try {
       const startTime = Date.now();
@@ -52,7 +52,7 @@ export class DailyStockReportController {
       );
       const duration = Date.now() - startTime;
       
-      console.log(`[DailyStockReportController][${requestId}] Request completed in ${duration}ms - Response: ${JSON.stringify(result)}`);
+      strapi.log.info(`[DailyStockReportController][${requestId}] Request completed in ${duration}ms - Response: ${JSON.stringify(result)}`);
       return result;
     } catch (error) {
       console.error(`[DailyStockReportController][${requestId}] Request failed - Stock: ${stockCode}, Email: ${generateReportDto.email}, Error:`, error);

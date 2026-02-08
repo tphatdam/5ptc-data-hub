@@ -4,7 +4,7 @@ import { seedDatabase } from './seed';
 import * as entities from '../entities';
 
 async function main() {
-  console.log('Connecting to database...');
+  strapi.log.info('Connecting to database...');
   
   const dataSource = new DataSource({
     type: 'postgres',
@@ -15,7 +15,7 @@ async function main() {
   });
 
   await dataSource.initialize();
-  console.log('Database connected.');
+  strapi.log.info('Database connected.');
 
   try {
     await seedDatabase(dataSource);
@@ -24,7 +24,7 @@ async function main() {
     process.exit(1);
   } finally {
     await dataSource.destroy();
-    console.log('Database connection closed.');
+    strapi.log.info('Database connection closed.');
   }
 }
 
