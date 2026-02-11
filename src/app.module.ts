@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { LoggerModule } from 'nestjs-pino';
 import { PdfModule } from './pdf/pdf.module';
 import { AiModule } from './ai/ai.module';
 import { HealthModule } from './health/health.module';
@@ -13,6 +14,7 @@ import { QuotesModule } from './quotes/quotes.module';
 import { ProvidersModule } from './providers/providers.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { TriggerModule } from './trigger/trigger.module';
+import { SeedModule } from './seed/seed.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
 import { validate } from './config/validate-env';
@@ -62,6 +64,17 @@ import { validate } from './config/validate-env';
     }),
     // Configure ScheduleModule for cron-based job scheduling
     ScheduleModule.forRoot(),
+    LoggerModule.forRoot({
+      pinoHttp:
+        process.env.NODE_ENV === 'production'
+          ? {}
+          : {
+              transport: {
+                target: 'pino-pretty',
+                options: { singleLine: true },
+              },
+            },
+    }),
     QueueModule,
     BrevoModule,
     PdfModule,
@@ -73,6 +86,7 @@ import { validate } from './config/validate-env';
     ProvidersModule,
     IngestionModule,
     TriggerModule,
+    SeedModule,
   ],
 })
 export class AppModule implements NestModule {

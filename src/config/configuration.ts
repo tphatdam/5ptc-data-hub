@@ -36,4 +36,22 @@ export default () => ({
       .map((s) => s.trim())
       .filter(Boolean),
   },
+  seed: {
+    run: process.env.RUN_SEED === 'true',
+    source: process.env.SEED_SOURCE || 'sstock',
+    fallback: process.env.SEED_FALLBACK !== 'false',
+    sstockBaseUrl:
+      process.env.SSTOCK_BASE_URL || 'https://api-feature.sstock.vn',
+    sstockCookie: process.env.SSTOCK_COOKIE,
+    httpTimeoutMs: parseInt(
+      process.env.SEED_HTTP_TIMEOUT_MS || '20000',
+      10,
+    ),
+    httpRetries: parseInt(process.env.SEED_HTTP_RETRIES || '4', 10),
+    batchSize: parseInt(process.env.SEED_BATCH_SIZE || '300', 10),
+    advisoryLockKey: parseInt(
+      process.env.SEED_ADVISORY_LOCK_KEY || '987654321',
+      10,
+    ),
+  },
 });

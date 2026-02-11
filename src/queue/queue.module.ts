@@ -73,6 +73,9 @@ import { BrevoModule } from '../brevo/brevo.module';
     BullModule.registerQueue({
       name: 'emailQueue',
     }),
+    BullModule.registerQueue({
+      name: 'seedQueue',
+    }),
     BrevoModule,
   ],
   providers: [QueueService, EmailProcessor],

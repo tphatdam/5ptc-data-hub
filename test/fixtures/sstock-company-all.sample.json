@@ -1,0 +1,28 @@
+[
+  {
+    "code": "VCB",
+    "name": "Vietcombank",
+    "exchange": "HSX",
+    "sector": "Banks",
+    "industry": "Banking",
+    "listed_at": "2008-01-01"
+  },
+  {
+    "ticker": "VNM",
+    "companyName": "Vinamilk",
+    "floor": "HOSE",
+    "sectorName": "Food & Beverage"
+  },
+  {
+    "symbol": "FPT",
+    "company_name": "FPT Corporation",
+    "market": "HOSE",
+    "industry": "Technology"
+  },
+  {
+    "code": "PVT",
+    "name": "PetroVietnam Construction",
+    "exchangeCode": "HNX",
+    "industry": "Construction"
+  }
+]
