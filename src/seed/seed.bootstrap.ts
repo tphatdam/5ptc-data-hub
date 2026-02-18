@@ -1,13 +1,14 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
+import { SEED_JOB_SYMBOLS, SEED_QUEUE } from '../queue/queue.constants';
 
 @Injectable()
 export class SeedBootstrapService implements OnApplicationBootstrap {
   constructor(
-    @InjectQueue('seedQueue') private readonly seedQueue: Queue,
+    @InjectQueue(SEED_QUEUE) private readonly seedQueue: Queue,
     private readonly configService: ConfigService,
     private readonly logger: PinoLogger,
   ) {
@@ -21,12 +22,13 @@ export class SeedBootstrapService implements OnApplicationBootstrap {
       return;
     }
     this.seedQueue
-      .add('seed:symbols', {}, { removeOnComplete: true, attempts: 1 })
+      .add(SEED_JOB_SYMBOLS, {}, { removeOnComplete: true, attempts: 1 })
       .then(() => {
         this.logger.info('Seed enqueued');
       })
-      .catch((err) => {
-        this.logger.warn({ err: err?.message }, 'Failed to enqueue seed job');
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn({ err: message }, 'Failed to enqueue seed job');
       });
   }
 }

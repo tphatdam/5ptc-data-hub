@@ -7,6 +7,7 @@ import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { UpsertService } from '../services/upsert.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { Symbol, StockCandle } from '../entities';
 import { CandleInterval } from '../enums';
@@ -24,6 +25,7 @@ export class GapFillJob extends BaseJob {
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
     private readonly upsertService: UpsertService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
@@ -41,16 +43,6 @@ export class GapFillJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getMarketProvider('TCBS_API');
-    if (!provider) {
-      throw new Error('No market data provider available');
-    }
-
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      throw new Error(`Data source ${provider.code} not found`);
-    }
-
     const tradingDays = this.marketHoursService.getLastNTradingDays(2);
     if (tradingDays.length === 0) {
       this.logger.debug('No trading days to check');
@@ -78,7 +70,17 @@ export class GapFillJob extends BaseJob {
         const from = startOfDay(tradingDays[tradingDays.length - 1]);
         const to = endOfDay(tradingDays[0]);
 
-        const candles = await provider.fetchIntradayCandles15m([symbol.ticker], from, to);
+        const stockFetch = await this.providerAdapter.invokeMarket(
+          'fetchIntradayCandles15m',
+          [[symbol.ticker], from, to],
+        );
+        const candles = stockFetch.value;
+        const dataSource = await this.providerFactory.getDataSourceByCode(
+          stockFetch.providerCode,
+        );
+        if (!dataSource) {
+          throw new Error(`Data source ${stockFetch.providerCode} not found`);
+        }
         
         if (candles.length > 0) {
           const candleRecords = candles.map((c) => ({

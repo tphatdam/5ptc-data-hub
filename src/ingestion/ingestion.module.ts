@@ -10,13 +10,9 @@ import { ProvidersModule } from '../providers/providers.module';
 import { CompanyDataModule } from '../company-data/company-data.module';
 import { SimplizeModule } from '../providers/simplize/simplize.module';
 
-/**
- * IngestionModule provides scheduled data collection jobs.
- * It imports ScheduleModule to enable cron-based scheduling.
- */
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
+    ScheduleModule,
     TypeOrmModule.forFeature([CrawlRun]),
     SymbolsModule,
     QuotesModule,

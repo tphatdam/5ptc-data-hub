@@ -7,6 +7,7 @@ import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { UpsertService } from '../services/upsert.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { Symbol, MarketIndex } from '../entities';
 import { CandleInterval } from '../enums';
@@ -21,6 +22,7 @@ export class EodDailyJob extends BaseJob {
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
     private readonly upsertService: UpsertService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
@@ -38,16 +40,6 @@ export class EodDailyJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getMarketProvider('TCBS_API');
-    if (!provider) {
-      throw new Error('No market data provider available');
-    }
-
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      throw new Error(`Data source ${provider.code} not found`);
-    }
-
     const today = new Date();
     let totalItems = 0;
 
@@ -59,7 +51,15 @@ export class EodDailyJob extends BaseJob {
     const batchSize = 50;
     for (let i = 0; i < tickers.length; i += batchSize) {
       const batch = tickers.slice(i, i + batchSize);
-      const candles = await provider.fetchDailyCandles1d(batch, today);
+      const stockFetch = await this.providerAdapter.invokeMarket('fetchDailyCandles1d', [
+        batch,
+        today,
+      ]);
+      const candles = stockFetch.value;
+      const dataSource = await this.providerFactory.getDataSourceByCode(stockFetch.providerCode);
+      if (!dataSource) {
+        throw new Error(`Data source ${stockFetch.providerCode} not found`);
+      }
       
       if (candles.length > 0) {
         const tickerToId = new Map(activeSymbols.map((s) => [s.ticker, s.id]));
@@ -88,7 +88,17 @@ export class EodDailyJob extends BaseJob {
     const indexCodes = indices.map((i) => i.code);
 
     if (indexCodes.length > 0) {
-      const indexCandles = await provider.fetchIndexCandles(indexCodes, '1d', today, today);
+      const indexFetch = await this.providerAdapter.invokeMarket('fetchIndexCandles', [
+        indexCodes,
+        '1d',
+        today,
+        today,
+      ]);
+      const indexCandles = indexFetch.value;
+      const dataSource = await this.providerFactory.getDataSourceByCode(indexFetch.providerCode);
+      if (!dataSource) {
+        throw new Error(`Data source ${indexFetch.providerCode} not found`);
+      }
       
       if (indexCandles.length > 0) {
         const codeToId = new Map(indices.map((i) => [i.code, i.id]));

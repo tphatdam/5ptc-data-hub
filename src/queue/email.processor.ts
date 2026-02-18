@@ -1,6 +1,13 @@
-import { Process, Processor } from '@nestjs/bull';
-import { Job } from 'bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
+import { Job } from 'bullmq';
 import { BrevoService } from '../brevo/brevo.service';
+import { logPayload, toLogError } from '../common/logging/ingestion-log';
+import {
+  EMAIL_JOB_SEND,
+  EMAIL_JOB_SEND_TEMPLATE,
+  EMAIL_QUEUE,
+} from './queue.constants';
 
 interface SendEmailJobData {
   to: string;
@@ -11,43 +18,107 @@ interface SendEmailJobData {
 interface SendTemplateEmailJobData {
   to: string;
   templateId: number;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
 }
 
-@Processor('emailQueue')
-export class EmailProcessor {
-  constructor(private readonly brevoService: BrevoService) {}
+@Processor(EMAIL_QUEUE)
+export class EmailProcessor extends WorkerHost {
+  private readonly logger = new Logger(EmailProcessor.name);
 
-  @Process('SendEmail')
-  async handleSendEmail(job: Job<SendEmailJobData>) {
+  constructor(private readonly brevoService: BrevoService) {
+    super();
+  }
+
+  async process(
+    job: Job<SendEmailJobData | SendTemplateEmailJobData>,
+  ): Promise<{ success: boolean; recipient: string; templateId?: number }> {
+    if (job.name === EMAIL_JOB_SEND) {
+      return this.handleSendEmail(job as Job<SendEmailJobData>);
+    }
+    if (job.name === EMAIL_JOB_SEND_TEMPLATE) {
+      return this.handleSendTemplateEmail(job as Job<SendTemplateEmailJobData>);
+    }
+    throw new Error(`Unsupported email job "${job.name}"`);
+  }
+
+  private async handleSendEmail(
+    job: Job<SendEmailJobData>,
+  ): Promise<{ success: boolean; recipient: string }> {
     const { to, subject, html } = job.data;
-
-    strapi.log.info(`Processing email to ${to} with subject: ${subject}`);
+    this.logger.log(
+      logPayload({
+        event: 'email_worker_started',
+        module: 'queue.email',
+        jobName: job.name,
+        queueJobId: String(job.id),
+        status: 'started',
+      }),
+    );
 
     try {
       await this.brevoService.sendEmail(to, subject, html);
-      strapi.log.info(`Email sent successfully to ${to}`);
+      this.logger.log(
+        logPayload({
+          event: 'email_worker_completed',
+          module: 'queue.email',
+          jobName: job.name,
+          queueJobId: String(job.id),
+          status: 'succeeded',
+        }),
+      );
       return { success: true, recipient: to };
-    } catch (error: any) {
-      console.error(`Failed to send email to ${to}:`, error);
-      await job.moveToFailed({ message: error.message }, true);
+    } catch (error: unknown) {
+      this.logger.error(
+        logPayload({
+          event: 'email_worker_failed',
+          module: 'queue.email',
+          jobName: job.name,
+          queueJobId: String(job.id),
+          status: 'failed',
+          error: toLogError(error),
+        }),
+      );
       throw error;
     }
   }
 
-  @Process('SendTemplateEmail')
-  async handleSendTemplateEmail(job: Job<SendTemplateEmailJobData>) {
+  private async handleSendTemplateEmail(
+    job: Job<SendTemplateEmailJobData>,
+  ): Promise<{ success: boolean; recipient: string; templateId: number }> {
     const { to, templateId, params } = job.data;
-
-    strapi.log.info(`Processing template email (ID: ${templateId}) to ${to}`);
+    this.logger.log(
+      logPayload({
+        event: 'email_worker_started',
+        module: 'queue.email',
+        jobName: job.name,
+        queueJobId: String(job.id),
+        status: 'started',
+      }),
+    );
 
     try {
       await this.brevoService.sendEmailWithTemplate(to, templateId, params);
-      strapi.log.info(`Template email sent successfully to ${to}`);
+      this.logger.log(
+        logPayload({
+          event: 'email_worker_completed',
+          module: 'queue.email',
+          jobName: job.name,
+          queueJobId: String(job.id),
+          status: 'succeeded',
+        }),
+      );
       return { success: true, recipient: to, templateId };
-    } catch (error: any) {
-      console.error(`Failed to send template email to ${to}:`, error);
-      await job.moveToFailed({ message: error.message }, true);
+    } catch (error: unknown) {
+      this.logger.error(
+        logPayload({
+          event: 'email_worker_failed',
+          module: 'queue.email',
+          jobName: job.name,
+          queueJobId: String(job.id),
+          status: 'failed',
+          error: toLogError(error),
+        }),
+      );
       throw error;
     }
   }

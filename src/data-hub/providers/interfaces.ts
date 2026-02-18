@@ -53,3 +53,22 @@ export interface SymbolListProvider {
 
   fetchSymbolList(): Promise<SymbolInfo[]>;
 }
+
+export type ProviderCapability =
+  | 'market'
+  | 'fundamentals'
+  | 'gold'
+  | 'news'
+  | 'symbol-list';
+
+export type AnyDataProvider =
+  | MarketDataProvider
+  | FundamentalsProvider
+  | GoldPriceProvider
+  | NewsProvider
+  | SymbolListProvider;
+
+export interface RegisteredProvider<TProvider extends AnyDataProvider = AnyDataProvider> {
+  code: string;
+  provider: TProvider;
+}

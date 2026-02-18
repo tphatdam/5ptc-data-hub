@@ -1,16 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { subMinutes } from 'date-fns';
 import { BaseJob } from './base.job';
 import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
-import { UpsertService } from '../services/upsert.service';
-import { ProviderFactoryService } from '../providers/provider-factory.service';
-import { Symbol, MarketIndex, DataSource } from '../entities';
-import { CandleInterval } from '../enums';
-import { subMinutes } from 'date-fns';
+import { Symbol, MarketIndex } from '../entities';
+import {
+  createIntradayBucketMeta,
+  logPayload,
+  toLogError,
+} from '../../common/logging/ingestion-log';
+import { QueueService } from '../../queue/queue.service';
+import {
+  IntradayIndexJobPayload,
+  IntradayStockJobPayload,
+} from './intraday-market.types';
 
 @Injectable()
 export class IntradayMarketJob extends BaseJob {
@@ -21,8 +29,8 @@ export class IntradayMarketJob extends BaseJob {
     jobRunService: JobRunService,
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
-    private readonly upsertService: UpsertService,
-    private readonly providerFactory: ProviderFactoryService,
+    private readonly queueService: QueueService,
+    private readonly configService: ConfigService,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
     @InjectRepository(MarketIndex)
@@ -39,82 +47,215 @@ export class IntradayMarketJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getMarketProvider('TCBS_API');
-    if (!provider) {
-      throw new Error('No market data provider available');
-    }
-
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      throw new Error(`Data source ${provider.code} not found`);
-    }
-
+    const startedAt = Date.now();
     const now = new Date();
     const from = subMinutes(now, 30);
+    const timezone =
+      this.configService.get<string>('schedule.timezone') || 'Asia/Ho_Chi_Minh';
+    const bucketMeta = createIntradayBucketMeta(now, timezone);
+    const dispatchConcurrency = this.resolveDispatchConcurrency();
 
     const activeSymbols = await this.symbolRepository.find({
       where: { isActive: true },
-      take: 100,
     });
-    const tickers = activeSymbols.map((s) => s.ticker);
-
     const indices = await this.indexRepository.find();
-    const indexCodes = indices.map((i) => i.code);
 
-    let totalItems = 0;
+    let enqueued = 0;
+    let dedupSkipped = 0;
+    let failedEnqueue = 0;
 
-    if (tickers.length > 0) {
-      const candles = await provider.fetchIntradayCandles15m(tickers, from, now);
-      
-      if (candles.length > 0) {
-        const tickerToId = new Map(activeSymbols.map((s) => [s.ticker, s.id]));
-        
-        const candleRecords = candles
-          .filter((c) => tickerToId.has(c.ticker))
-          .map((c) => ({
-            symbolId: tickerToId.get(c.ticker)!,
-            interval: CandleInterval.INTRADAY_15M,
-            ts: new Date(c.ts),
-            open: String(c.open),
-            high: String(c.high),
-            low: String(c.low),
-            close: String(c.close),
-            volume: String(c.volume),
-            value: c.value ? String(c.value) : undefined,
-            sourceId: dataSource.id,
-          }));
+    this.logger.log(
+      logPayload({
+        event: 'intraday_dispatch_started',
+        module: 'data-hub.intraday-dispatcher',
+        jobName: this.jobName,
+        cycleId: bucketMeta.cycleId,
+        timeBucket: bucketMeta.bucketIso,
+        status: 'started',
+        symbolCount: activeSymbols.length,
+        indexCount: indices.length,
+      }),
+    );
 
-        const result = await this.upsertService.upsertStockCandles(candleRecords);
-        totalItems += result.inserted + result.updated;
+    await this.runWithConcurrency(activeSymbols, dispatchConcurrency, async (symbol) => {
+      const payload: IntradayStockJobPayload = {
+        cycleId: bucketMeta.cycleId,
+        timeBucket: bucketMeta.bucketIso,
+        symbolId: symbol.id,
+        ticker: symbol.ticker,
+        from: from.toISOString(),
+        to: now.toISOString(),
+      };
+
+      try {
+        const result = await this.queueService.addMarketIntradayStockJob(payload);
+        if (result.dedup) {
+          dedupSkipped += 1;
+          this.logger.warn(
+            logPayload({
+              event: 'intraday_symbol_dedup_skipped',
+              module: 'data-hub.intraday-dispatcher',
+              jobName: this.jobName,
+              cycleId: payload.cycleId,
+              timeBucket: payload.timeBucket,
+              queueJobId: result.queueJobId,
+              symbolId: payload.symbolId,
+              ticker: payload.ticker,
+              status: 'dedup',
+            }),
+          );
+          return;
+        }
+
+        enqueued += 1;
+        this.logger.log(
+          logPayload({
+            event: 'intraday_symbol_enqueued',
+            module: 'data-hub.intraday-dispatcher',
+            jobName: this.jobName,
+            cycleId: payload.cycleId,
+            timeBucket: payload.timeBucket,
+            queueJobId: result.queueJobId,
+            symbolId: payload.symbolId,
+            ticker: payload.ticker,
+            status: 'enqueued',
+          }),
+        );
+      } catch (error: unknown) {
+        failedEnqueue += 1;
+        this.logger.error(
+          logPayload({
+            event: 'intraday_symbol_enqueue_failed',
+            module: 'data-hub.intraday-dispatcher',
+            jobName: this.jobName,
+            cycleId: payload.cycleId,
+            timeBucket: payload.timeBucket,
+            symbolId: payload.symbolId,
+            ticker: payload.ticker,
+            status: 'failed',
+            error: toLogError(error),
+          }),
+        );
       }
+    });
+
+    await this.runWithConcurrency(indices, dispatchConcurrency, async (index) => {
+      const payload: IntradayIndexJobPayload = {
+        cycleId: bucketMeta.cycleId,
+        timeBucket: bucketMeta.bucketIso,
+        indexId: index.id,
+        indexCode: index.code,
+        from: from.toISOString(),
+        to: now.toISOString(),
+      };
+
+      try {
+        const result = await this.queueService.addMarketIntradayIndexJob(payload);
+        if (result.dedup) {
+          dedupSkipped += 1;
+          this.logger.warn(
+            logPayload({
+              event: 'intraday_index_dedup_skipped',
+              module: 'data-hub.intraday-dispatcher',
+              jobName: this.jobName,
+              cycleId: payload.cycleId,
+              timeBucket: payload.timeBucket,
+              queueJobId: result.queueJobId,
+              indexCode: payload.indexCode,
+              status: 'dedup',
+            }),
+          );
+          return;
+        }
+
+        enqueued += 1;
+        this.logger.log(
+          logPayload({
+            event: 'intraday_index_enqueued',
+            module: 'data-hub.intraday-dispatcher',
+            jobName: this.jobName,
+            cycleId: payload.cycleId,
+            timeBucket: payload.timeBucket,
+            queueJobId: result.queueJobId,
+            indexCode: payload.indexCode,
+            status: 'enqueued',
+          }),
+        );
+      } catch (error: unknown) {
+        failedEnqueue += 1;
+        this.logger.error(
+          logPayload({
+            event: 'intraday_index_enqueue_failed',
+            module: 'data-hub.intraday-dispatcher',
+            jobName: this.jobName,
+            cycleId: payload.cycleId,
+            timeBucket: payload.timeBucket,
+            indexCode: payload.indexCode,
+            status: 'failed',
+            error: toLogError(error),
+          }),
+        );
+      }
+    });
+
+    this.logger.log(
+      logPayload({
+        event: 'intraday_dispatch_completed',
+        module: 'data-hub.intraday-dispatcher',
+        jobName: this.jobName,
+        cycleId: bucketMeta.cycleId,
+        timeBucket: bucketMeta.bucketIso,
+        processed: enqueued,
+        durationMs: Date.now() - startedAt,
+        status: failedEnqueue > 0 ? 'partial' : 'succeeded',
+        symbolCount: activeSymbols.length,
+        indexCount: indices.length,
+        enqueued,
+        dedupSkipped,
+        failedEnqueue,
+      }),
+    );
+
+    return enqueued;
+  }
+
+  private resolveDispatchConcurrency(): number {
+    const configured = Number(
+      this.configService.get<string>('dataHub.intradayDispatchConcurrency') ||
+        process.env.DATA_HUB_INTRADAY_DISPATCH_CONCURRENCY ||
+        '25',
+    );
+    if (!Number.isFinite(configured)) {
+      return 25;
+    }
+    return Math.min(Math.max(Math.trunc(configured), 1), 100);
+  }
+
+  private async runWithConcurrency<T>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T) => Promise<void>,
+  ): Promise<void> {
+    if (items.length === 0) {
+      return;
     }
 
-    if (indexCodes.length > 0) {
-      const indexCandles = await provider.fetchIndexCandles(indexCodes, '15m', from, now);
-      
-      if (indexCandles.length > 0) {
-        const codeToId = new Map(indices.map((i) => [i.code, i.id]));
-        
-        const indexRecords = indexCandles
-          .filter((c) => codeToId.has(c.indexCode))
-          .map((c) => ({
-            indexId: codeToId.get(c.indexCode)!,
-            interval: CandleInterval.INTRADAY_15M,
-            ts: new Date(c.ts),
-            open: String(c.open),
-            high: String(c.high),
-            low: String(c.low),
-            close: String(c.close),
-            volume: c.volume ? String(c.volume) : undefined,
-            sourceId: dataSource.id,
-          }));
+    const runners = Math.min(concurrency, items.length);
+    let cursor = 0;
 
-        const result = await this.upsertService.upsertIndexCandles(indexRecords);
-        totalItems += result.inserted + result.updated;
-      }
-    }
+    await Promise.all(
+      Array.from({ length: runners }, async () => {
+        while (true) {
+          const index = cursor;
+          cursor += 1;
 
-    this.logger.log(`Intraday job completed: ${totalItems} items processed`);
-    return totalItems;
+          if (index >= items.length) {
+            return;
+          }
+
+          await worker(items[index]);
+        }
+      }),
+    );
   }
 }

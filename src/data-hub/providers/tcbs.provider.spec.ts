@@ -2,6 +2,7 @@ import { TcbsProvider } from './tcbs.provider';
 import { HttpClientService } from '../services/http-client.service';
 import { CandleInterval } from '../enums';
 import { AxiosResponse, AxiosHeaders } from 'axios';
+import { ConfigService } from '@nestjs/config';
 
 const createMockResponse = <T>(data: T): AxiosResponse<T> => ({
   data,
@@ -14,6 +15,7 @@ const createMockResponse = <T>(data: T): AxiosResponse<T> => ({
 describe('TcbsProvider', () => {
   let provider: TcbsProvider;
   let httpClientMock: jest.Mocked<HttpClientService>;
+  let configServiceMock: jest.Mocked<ConfigService>;
 
   beforeEach(() => {
     httpClientMock = {
@@ -21,7 +23,11 @@ describe('TcbsProvider', () => {
       post: jest.fn(),
     } as any;
 
-    provider = new TcbsProvider(httpClientMock);
+    configServiceMock = {
+      get: jest.fn().mockReturnValue(undefined),
+    } as any;
+
+    provider = new TcbsProvider(httpClientMock, configServiceMock);
   });
 
   describe('fetchDailyCandles1d', () => {

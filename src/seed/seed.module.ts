@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Exchange, MarketIndex, Symbol } from '../data-hub/entities';
+import { Symbol } from '../db/entities/symbol.entity';
 import { QueueModule } from '../queue/queue.module';
 import { SeedHttpClient } from './http/seed-http.client';
 import { SeedBootstrapService } from './seed.bootstrap';
@@ -11,11 +11,7 @@ import { SStockSeedSource } from './sources/sstock.source';
 import { StaticSeedSource } from './sources/static.source';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([Exchange, Symbol, MarketIndex]),
-    QueueModule,
-  ],
+  imports: [ConfigModule, TypeOrmModule.forFeature([Symbol]), QueueModule],
   providers: [
     SeedHttpClient,
     SStockSeedSource,

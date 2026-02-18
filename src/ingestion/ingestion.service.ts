@@ -24,6 +24,11 @@ import {
   mapReportsToRows,
   mapSubsidiaries,
 } from '../providers/simplize/mappers';
+import {
+  createIntradayBucketMeta,
+  logPayload,
+  toLogError,
+} from '../common/logging/ingestion-log';
 
 /**
  * IngestionService orchestrates scheduled data collection jobs.
@@ -304,10 +309,42 @@ export class IngestionService implements OnModuleInit {
     this.logger.log('Starting intraday-15m job');
 
     await this.executeIngestionJob('intraday-15m', this.provider.name, async (symbols) => {
+      const startedAt = Date.now();
+      const timezone =
+        this.configService.get<string>('schedule.timezone') || 'Asia/Ho_Chi_Minh';
+      const bucketMeta = createIntradayBucketMeta(new Date(), timezone);
       const allTicks: BulkUpsertQuoteIntradayDto[] = [];
+      let symbolsSucceeded = 0;
+      let errorsCount = 0;
+
+      this.logger.log(
+        logPayload({
+          event: 'intraday_dispatch_started',
+          module: 'ingestion.legacy',
+          jobName: 'intraday-15m-legacy',
+          cycleId: bucketMeta.cycleId,
+          timeBucket: bucketMeta.bucketIso,
+          status: 'started',
+          symbolCount: symbols.length,
+          indexCount: 0,
+        }),
+      );
 
       // Fetch intraday data for each symbol
       for (const symbol of symbols) {
+        this.logger.log(
+          logPayload({
+            event: 'intraday_symbol_enqueued',
+            module: 'ingestion.legacy',
+            jobName: 'intraday-15m-legacy',
+            cycleId: bucketMeta.cycleId,
+            timeBucket: bucketMeta.bucketIso,
+            symbolId: symbol.id,
+            ticker: symbol.symbol,
+            symbol: symbol.symbol,
+            status: 'legacy_fetch_started',
+          }),
+        );
         try {
           const ticks = await this.provider.fetchIntraday({
             symbol: symbol.symbol,
@@ -323,15 +360,26 @@ export class IngestionService implements OnModuleInit {
           }));
 
           allTicks.push(...ticksWithMetadata);
+          symbolsSucceeded += 1;
 
           this.logger.debug(
             `Fetched ${ticks.length} intraday ticks for symbol ${symbol.symbol}`,
           );
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
+          errorsCount += 1;
           this.logger.warn(
-            `Failed to fetch intraday data for symbol ${symbol.symbol}: ${errorMessage}`,
+            logPayload({
+              event: 'intraday_symbol_fetch_failed',
+              module: 'ingestion.legacy',
+              jobName: 'intraday-15m-legacy',
+              cycleId: bucketMeta.cycleId,
+              timeBucket: bucketMeta.bucketIso,
+              symbolId: symbol.id,
+              ticker: symbol.symbol,
+              symbol: symbol.symbol,
+              status: 'failed',
+              error: toLogError(error),
+            }),
           );
           // Continue with other symbols even if one fails
         }
@@ -339,8 +387,27 @@ export class IngestionService implements OnModuleInit {
 
       // Bulk upsert all collected ticks
       const rowsUpserted = await this.quoteIntradayRepo.bulkUpsert(allTicks);
+      this.logger.log(
+        logPayload({
+          event: 'intraday_dispatch_completed',
+          module: 'ingestion.legacy',
+          jobName: 'intraday-15m-legacy',
+          cycleId: bucketMeta.cycleId,
+          timeBucket: bucketMeta.bucketIso,
+          status: errorsCount > 0 ? 'partial' : 'succeeded',
+          durationMs: Date.now() - startedAt,
+          symbolCount: symbols.length,
+          indexCount: 0,
+          enqueued: symbols.length,
+          dedupSkipped: 0,
+          failedEnqueue: errorsCount,
+          processed: rowsUpserted,
+          symbolsSucceeded,
+          errorsCount,
+        }),
+      );
 
-      return { rowsUpserted };
+      return { rowsUpserted, symbolsSucceeded, errorsCount };
     });
   }
 

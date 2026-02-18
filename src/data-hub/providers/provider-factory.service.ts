@@ -1,99 +1,225 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DataSource as DataSourceEntity } from '../entities';
 import { TcbsProvider } from './tcbs.provider';
-import { MarketDataProvider, FundamentalsProvider, GoldPriceProvider, NewsProvider, SymbolListProvider } from './interfaces';
+import {
+  AnyDataProvider,
+  MarketDataProvider,
+  FundamentalsProvider,
+  GoldPriceProvider,
+  NewsProvider,
+  SymbolListProvider,
+  ProviderCapability,
+  RegisteredProvider,
+} from './interfaces';
+import { ProviderRegistryService } from './provider-registry.service';
+
+export type ProviderEntry<TProvider extends AnyDataProvider> = RegisteredProvider<TProvider>;
 
 @Injectable()
 export class ProviderFactoryService {
   private readonly logger = new Logger(ProviderFactoryService.name);
-  private readonly marketProviders = new Map<string, MarketDataProvider>();
-  private readonly fundamentalsProviders = new Map<string, FundamentalsProvider>();
-  private readonly goldProviders = new Map<string, GoldPriceProvider>();
-  private readonly newsProviders = new Map<string, NewsProvider>();
-  private readonly symbolListProviders = new Map<string, SymbolListProvider>();
+  private readonly defaultProviderChain: string[];
 
   constructor(
     @InjectRepository(DataSourceEntity)
     private readonly dataSourceRepository: Repository<DataSourceEntity>,
+    private readonly configService: ConfigService,
+    private readonly providerRegistry: ProviderRegistryService,
     private readonly tcbsProvider: TcbsProvider,
   ) {
+    this.defaultProviderChain = this.loadDefaultProviderChain();
     this.registerProvider('TCBS_API', this.tcbsProvider);
   }
 
-  private registerProvider(code: string, provider: any): void {
+  private loadDefaultProviderChain(): string[] {
+    const configured =
+      this.configService.get<string>('dataHub.providerFallbackChain') ||
+      process.env.DATA_HUB_PROVIDER_FALLBACK_CHAIN ||
+      'VCI_API,TCBS_API,MSN_API';
+
+    return configured
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  private registerProvider(code: string, provider: AnyDataProvider): void {
+    const capabilities: ProviderCapability[] = [];
+
     if ('fetchIntradayCandles15m' in provider) {
-      this.marketProviders.set(code, provider);
+      capabilities.push('market');
     }
     if ('fetchSnapshots' in provider) {
-      this.fundamentalsProviders.set(code, provider);
+      capabilities.push('fundamentals');
     }
     if ('fetchGold' in provider) {
-      this.goldProviders.set(code, provider);
+      capabilities.push('gold');
     }
     if ('fetchLatest' in provider) {
-      this.newsProviders.set(code, provider);
+      capabilities.push('news');
     }
     if ('fetchSymbolList' in provider) {
-      this.symbolListProviders.set(code, provider);
+      capabilities.push('symbol-list');
     }
+
+    if (capabilities.length === 0) {
+      this.logger.warn(`Skipping provider ${code}: no recognized capabilities`);
+      return;
+    }
+
+    this.providerRegistry.register({ code, provider, capabilities });
+  }
+
+  async getMarketProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<MarketDataProvider>>> {
+    const entries = this.providerRegistry.listByCapability<MarketDataProvider>('market');
+    return this.orderProviders(entries, preferredCodes);
+  }
+
+  async getFundamentalsProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<FundamentalsProvider>>> {
+    const entries =
+      this.providerRegistry.listByCapability<FundamentalsProvider>('fundamentals');
+    return this.orderProviders(entries, preferredCodes);
+  }
+
+  async getGoldProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<GoldPriceProvider>>> {
+    const entries = this.providerRegistry.listByCapability<GoldPriceProvider>('gold');
+    return this.orderProviders(entries, preferredCodes);
+  }
+
+  async getNewsProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<NewsProvider>>> {
+    const entries = this.providerRegistry.listByCapability<NewsProvider>('news');
+    return this.orderProviders(entries, preferredCodes);
+  }
+
+  async getSymbolListProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<SymbolListProvider>>> {
+    const entries =
+      this.providerRegistry.listByCapability<SymbolListProvider>('symbol-list');
+    return this.orderProviders(entries, preferredCodes);
   }
 
   async getMarketProvider(code?: string): Promise<MarketDataProvider | null> {
     if (code) {
-      return this.marketProviders.get(code) || null;
+      return (
+        this.providerRegistry.getByCode<MarketDataProvider>('market', code)?.provider || null
+      );
     }
 
     const source = await this.dataSourceRepository.findOne({
       where: { type: 'MARKET' as any, isActive: true },
     });
-    
+
     if (source) {
-      return this.marketProviders.get(source.code) || null;
+      return (
+        this.providerRegistry.getByCode<MarketDataProvider>('market', source.code)
+          ?.provider || null
+      );
     }
 
-    return this.marketProviders.values().next().value || null;
+    const entries = await this.getMarketProviderEntries();
+    return entries[0]?.provider || null;
   }
 
   async getFundamentalsProvider(code?: string): Promise<FundamentalsProvider | null> {
     if (code) {
-      return this.fundamentalsProviders.get(code) || null;
+      return (
+        this.providerRegistry.getByCode<FundamentalsProvider>('fundamentals', code)
+          ?.provider || null
+      );
     }
 
     const source = await this.dataSourceRepository.findOne({
       where: { type: 'MARKET' as any, isActive: true },
     });
-    
+
     if (source) {
-      return this.fundamentalsProviders.get(source.code) || null;
+      return (
+        this.providerRegistry.getByCode<FundamentalsProvider>('fundamentals', source.code)
+          ?.provider || null
+      );
     }
 
-    return this.fundamentalsProviders.values().next().value || null;
+    const entries = await this.getFundamentalsProviderEntries();
+    return entries[0]?.provider || null;
   }
 
   async getGoldProvider(code?: string): Promise<GoldPriceProvider | null> {
     if (code) {
-      return this.goldProviders.get(code) || null;
+      return this.providerRegistry.getByCode<GoldPriceProvider>('gold', code)?.provider || null;
     }
-    return this.goldProviders.values().next().value || null;
+    const entries = await this.getGoldProviderEntries();
+    return entries[0]?.provider || null;
   }
 
   async getNewsProvider(code?: string): Promise<NewsProvider | null> {
     if (code) {
-      return this.newsProviders.get(code) || null;
+      return this.providerRegistry.getByCode<NewsProvider>('news', code)?.provider || null;
     }
-    return this.newsProviders.values().next().value || null;
+    const entries = await this.getNewsProviderEntries();
+    return entries[0]?.provider || null;
   }
 
   async getSymbolListProvider(code?: string): Promise<SymbolListProvider | null> {
     if (code) {
-      return this.symbolListProviders.get(code) || null;
+      return (
+        this.providerRegistry.getByCode<SymbolListProvider>('symbol-list', code)
+          ?.provider || null
+      );
     }
-    return this.symbolListProviders.values().next().value || null;
+    const entries = await this.getSymbolListProviderEntries();
+    return entries[0]?.provider || null;
   }
 
   async getDataSourceByCode(code: string): Promise<DataSourceEntity | null> {
     return this.dataSourceRepository.findOne({ where: { code } });
+  }
+
+  private orderProviders<TProvider extends AnyDataProvider>(
+    entries: Array<ProviderEntry<TProvider>>,
+    preferredCodes?: string[],
+  ): Array<ProviderEntry<TProvider>> {
+    if (entries.length <= 1) {
+      return entries;
+    }
+
+    const order = this.mergeProviderOrder(preferredCodes);
+    if (order.length === 0) {
+      return entries;
+    }
+
+    const orderIndex = new Map(order.map((code, index) => [code, index]));
+    return [...entries].sort((left, right) => {
+      const leftOrder = orderIndex.get(left.code) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = orderIndex.get(right.code) ?? Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder;
+    });
+  }
+
+  private mergeProviderOrder(preferredCodes?: string[]): string[] {
+    const merged = [...(preferredCodes || []), ...this.defaultProviderChain];
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+
+    for (const code of merged) {
+      if (!code || seen.has(code)) {
+        continue;
+      }
+      seen.add(code);
+      ordered.push(code);
+    }
+
+    return ordered;
   }
 }

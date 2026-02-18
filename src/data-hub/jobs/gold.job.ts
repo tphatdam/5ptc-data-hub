@@ -5,6 +5,7 @@ import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { UpsertService } from '../services/upsert.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { GoldProvider } from '../enums';
 
@@ -18,6 +19,7 @@ export class GoldJob extends BaseJob {
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
     private readonly upsertService: UpsertService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
   ) {
     super(jobRunService, advisoryLockService, marketHoursService);
@@ -31,18 +33,13 @@ export class GoldJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getGoldProvider();
-    if (!provider) {
+    const providerEntries = await this.providerFactory.getGoldProviderEntries();
+    if (providerEntries.length === 0) {
       this.logger.warn('No gold provider available, skipping...');
       return 0;
     }
 
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      this.logger.warn(`Data source ${provider.code} not found`);
-      return 0;
-    }
-
+    const providerCodes = providerEntries.map((entry) => entry.code);
     const today = new Date();
     let totalItems = 0;
 
@@ -50,7 +47,19 @@ export class GoldJob extends BaseJob {
 
     for (const goldProvider of providers) {
       try {
-        const priceData = await provider.fetchGold(goldProvider, today);
+        const goldFetch = await this.providerAdapter.invokeGold('fetchGold', [
+          goldProvider,
+          today,
+        ], providerCodes);
+        const priceData = goldFetch.value;
+        const dataSource = await this.providerFactory.getDataSourceByCode(
+          goldFetch.providerCode,
+        );
+        if (!dataSource) {
+          this.logger.warn(`Data source ${goldFetch.providerCode} not found`);
+          continue;
+        }
+
         if (priceData) {
           const result = await this.upsertService.upsertGoldPrices([
             {

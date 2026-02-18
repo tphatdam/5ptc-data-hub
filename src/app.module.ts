@@ -9,15 +9,17 @@ import { HealthModule } from './health/health.module';
 import { BrevoModule } from './brevo/brevo.module';
 import { QueueModule } from './queue/queue.module';
 import { DailyStockReportModule } from './daily-stock-report/daily-stock-report.module';
-import { DataHubModule } from './data-hub/data-hub.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { ProvidersModule } from './providers/providers.module';
 import { IngestionModule } from './ingestion/ingestion.module';
-import { TriggerModule } from './trigger/trigger.module';
 import { SeedModule } from './seed/seed.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
 import { validate } from './config/validate-env';
+import { MarketIngestionModule } from './modules/market-ingestion/market-ingestion.module';
+import { MarketReferenceModule } from './modules/market-reference/market-reference.module';
+import { MarketPricingModule } from './modules/market-pricing/market-pricing.module';
+import { CompanyIntelModule } from './modules/company-intel/company-intel.module';
 
 @Module({
   imports: [
@@ -34,16 +36,13 @@ import { validate } from './config/validate-env';
         const nodeEnv = configService.get<string>('app.nodeEnv');
         const databaseUrl = configService.get<string>('database.url');
 
-        // Base configuration
         const baseConfig = {
           type: 'postgres' as const,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          // Disable synchronize for production - use migrations instead
           synchronize: nodeEnv !== 'production',
           logging: nodeEnv === 'development',
         };
 
-        // Option 1: Use DATABASE_URL if provided
         if (databaseUrl) {
           return {
             ...baseConfig,
@@ -51,7 +50,6 @@ import { validate } from './config/validate-env';
           };
         }
 
-        // Option 2: Use discrete connection parameters
         return {
           ...baseConfig,
           host: configService.get<string>('database.host'),
@@ -62,7 +60,6 @@ import { validate } from './config/validate-env';
         };
       },
     }),
-    // Configure ScheduleModule for cron-based job scheduling
     ScheduleModule.forRoot(),
     LoggerModule.forRoot({
       pinoHttp:
@@ -81,12 +78,14 @@ import { validate } from './config/validate-env';
     AiModule,
     HealthModule,
     DailyStockReportModule,
-    DataHubModule,
     QuotesModule,
     ProvidersModule,
     IngestionModule,
-    TriggerModule,
     SeedModule,
+    MarketReferenceModule,
+    MarketPricingModule,
+    CompanyIntelModule,
+    MarketIngestionModule,
   ],
 })
 export class AppModule implements NestModule {

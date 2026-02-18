@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HttpClientService } from '../services/http-client.service';
 import { MarketDataProvider, FundamentalsProvider, SymbolListProvider, SymbolInfo } from './interfaces';
 import { CandleDTO, IndexCandleDTO, SnapshotDTO } from '../dto';
 import { CandleInterval } from '../enums';
 import { format, subDays } from 'date-fns';
+import { logPayload, toLogError } from '../../common/logging/ingestion-log';
 
 interface TcbsStockPrice {
   tradingDate: string;
@@ -28,20 +30,40 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
   readonly code = 'TCBS_API';
   private readonly logger = new Logger(TcbsProvider.name);
   private readonly baseUrl = 'https://apipubaws.tcbs.com.vn';
+  private readonly requestConcurrency: number;
 
-  constructor(private readonly httpClient: HttpClientService) {}
+  constructor(
+    private readonly httpClient: HttpClientService,
+    private readonly configService: ConfigService,
+  ) {
+    const configuredConcurrency = Number(
+      this.configService.get<string>('dataHub.providerConcurrency') ||
+        process.env.DATA_HUB_PROVIDER_CONCURRENCY ||
+        '8',
+    );
+
+    const boundedConcurrency = Number.isFinite(configuredConcurrency)
+      ? Math.trunc(configuredConcurrency)
+      : 8;
+    this.requestConcurrency = Math.min(Math.max(boundedConcurrency, 1), 20);
+  }
 
   async fetchIntradayCandles15m(
     tickers: string[],
     from: Date,
     to: Date
   ): Promise<CandleDTO[]> {
-    const results: CandleDTO[] = [];
+    const perTicker = await this.mapWithConcurrency(tickers, async (ticker) => {
+      const startedAt = Date.now();
+      this.logFetchStarted('intraday', {
+        ticker,
+        from: from.toISOString(),
+        to: to.toISOString(),
+      });
 
-    for (const ticker of tickers) {
       try {
         const url = `${this.baseUrl}/stock-insight/v1/intraday/${ticker}/investor/his/paging`;
-        const response = await this.httpClient.get(url, {
+        const response = await this.httpClient.get<{ data?: any[] }>(url, {
           params: {
             page: 0,
             size: 100,
@@ -49,27 +71,54 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           },
         });
 
-        if (response.data?.data) {
-          const candles = this.aggregateToCandles(ticker, response.data.data, '15m');
-          results.push(...candles);
+        const trades = response.data?.data;
+        if (!trades || trades.length === 0) {
+          this.logFetchCompleted('intraday', {
+            ticker,
+            durationMs: Date.now() - startedAt,
+            processed: 0,
+            status: 'succeeded',
+          });
+          return [] as CandleDTO[];
         }
-      } catch (error: any) {
-        this.logger.warn(`Failed to fetch intraday data for ${ticker}: ${error.message}`);
-      }
-    }
 
-    return results;
+        const candles = this.aggregateToCandles(ticker, trades, '15m');
+        this.logFetchCompleted('intraday', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          processed: candles.length,
+          status: 'succeeded',
+        });
+        return candles;
+      } catch (error: unknown) {
+        this.logFetchCompleted('intraday', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          status: 'failed',
+          error: toLogError(error),
+        });
+        return [] as CandleDTO[];
+      }
+    });
+
+    return perTicker.flat();
   }
 
   async fetchDailyCandles1d(tickers: string[], date: Date): Promise<CandleDTO[]> {
-    const results: CandleDTO[] = [];
     const fromDate = format(subDays(date, 5), 'yyyy-MM-dd');
     const toDate = format(date, 'yyyy-MM-dd');
 
-    for (const ticker of tickers) {
+    const perTicker = await this.mapWithConcurrency(tickers, async (ticker) => {
+      const startedAt = Date.now();
+      this.logFetchStarted('daily', {
+        ticker,
+        from: fromDate,
+        to: toDate,
+      });
+
       try {
         const url = `${this.baseUrl}/stock-insight/v1/stock/bars-long-term`;
-        const response = await this.httpClient.get<{ data: TcbsStockPrice[] }>(url, {
+        const response = await this.httpClient.get<{ data?: TcbsStockPrice[] }>(url, {
           params: {
             ticker,
             type: 'stock',
@@ -79,27 +128,37 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           },
         });
 
-        if (response.data?.data) {
-          for (const bar of response.data.data) {
-            results.push({
-              ticker,
-              interval: CandleInterval.DAILY,
-              ts: bar.tradingDate,
-              open: bar.open,
-              high: bar.high,
-              low: bar.low,
-              close: bar.close,
-              volume: bar.volume,
-              value: bar.value,
-            });
-          }
-        }
-      } catch (error: any) {
-        this.logger.warn(`Failed to fetch daily data for ${ticker}: ${error.message}`);
+        const bars = response.data?.data || [];
+        const candles = bars.map((bar) => ({
+          ticker,
+          interval: CandleInterval.DAILY,
+          ts: bar.tradingDate,
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+          volume: bar.volume,
+          value: bar.value,
+        }));
+        this.logFetchCompleted('daily', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          processed: candles.length,
+          status: 'succeeded',
+        });
+        return candles;
+      } catch (error: unknown) {
+        this.logFetchCompleted('daily', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          status: 'failed',
+          error: toLogError(error),
+        });
+        return [] as CandleDTO[];
       }
-    }
+    });
 
-    return results;
+    return perTicker.flat();
   }
 
   async fetchIndexCandles(
@@ -108,14 +167,21 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
     from: Date,
     to: Date
   ): Promise<IndexCandleDTO[]> {
-    const results: IndexCandleDTO[] = [];
     const fromDate = format(from, 'yyyy-MM-dd');
     const toDate = format(to, 'yyyy-MM-dd');
 
-    for (const indexCode of indexCodes) {
+    const perIndex = await this.mapWithConcurrency(indexCodes, async (indexCode) => {
+      const startedAt = Date.now();
+      this.logFetchStarted('index', {
+        indexCode,
+        interval,
+        from: fromDate,
+        to: toDate,
+      });
+
       try {
         const url = `${this.baseUrl}/stock-insight/v1/stock/bars-long-term`;
-        const response = await this.httpClient.get<{ data: TcbsStockPrice[] }>(url, {
+        const response = await this.httpClient.get<{ data?: TcbsStockPrice[] }>(url, {
           params: {
             ticker: indexCode,
             type: 'index',
@@ -125,59 +191,95 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           },
         });
 
-        if (response.data?.data) {
-          for (const bar of response.data.data) {
-            results.push({
-              indexCode,
-              interval: interval === '1d' ? CandleInterval.DAILY : CandleInterval.INTRADAY_15M,
-              ts: bar.tradingDate,
-              open: bar.open,
-              high: bar.high,
-              low: bar.low,
-              close: bar.close,
-              volume: bar.volume,
-            });
-          }
-        }
-      } catch (error: any) {
-        this.logger.warn(`Failed to fetch index data for ${indexCode}: ${error.message}`);
+        const bars = response.data?.data || [];
+        const candles = bars.map((bar) => ({
+          indexCode,
+          interval:
+            interval === '1d' ? CandleInterval.DAILY : CandleInterval.INTRADAY_15M,
+          ts: bar.tradingDate,
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+          volume: bar.volume,
+        }));
+        this.logFetchCompleted('index', {
+          indexCode,
+          durationMs: Date.now() - startedAt,
+          processed: candles.length,
+          status: 'succeeded',
+        });
+        return candles;
+      } catch (error: unknown) {
+        this.logFetchCompleted('index', {
+          indexCode,
+          durationMs: Date.now() - startedAt,
+          status: 'failed',
+          error: toLogError(error),
+        });
+        return [] as IndexCandleDTO[];
       }
-    }
+    });
 
-    return results;
+    return perIndex.flat();
   }
 
   async fetchSnapshots(tickers: string[]): Promise<SnapshotDTO[]> {
-    const results: SnapshotDTO[] = [];
     const now = new Date().toISOString();
 
-    for (const ticker of tickers) {
+    const snapshots = await this.mapWithConcurrency(tickers, async (ticker) => {
+      const startedAt = Date.now();
+      this.logFetchStarted('snapshot', { ticker });
+
       try {
         const url = `${this.baseUrl}/tcanalysis/v1/ticker/${ticker}/overview`;
-        const response = await this.httpClient.get(url);
+        const response = await this.httpClient.get<any>(url);
 
-        if (response.data) {
-          const data = response.data;
-          results.push({
+        if (!response.data) {
+          this.logFetchCompleted('snapshot', {
             ticker,
-            asOf: now,
-            pe: data.pe ?? undefined,
-            eps: data.eps ?? undefined,
-            marketCap: data.marketCap ?? undefined,
-            freeFloat: data.freeFloat ?? undefined,
-            sharesOut: data.sharesOutstanding ?? undefined,
+            durationMs: Date.now() - startedAt,
+            processed: 0,
+            status: 'succeeded',
           });
+          return null;
         }
-      } catch (error: any) {
-        this.logger.warn(`Failed to fetch snapshot for ${ticker}: ${error.message}`);
-      }
-    }
 
-    return results;
+        const data = response.data;
+        const snapshot = {
+          ticker,
+          asOf: now,
+          pe: data.pe ?? undefined,
+          eps: data.eps ?? undefined,
+          marketCap: data.marketCap ?? undefined,
+          freeFloat: data.freeFloat ?? undefined,
+          sharesOut: data.sharesOutstanding ?? undefined,
+        } as SnapshotDTO;
+        this.logFetchCompleted('snapshot', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          processed: 1,
+          status: 'succeeded',
+        });
+        return snapshot;
+      } catch (error: unknown) {
+        this.logFetchCompleted('snapshot', {
+          ticker,
+          durationMs: Date.now() - startedAt,
+          status: 'failed',
+          error: toLogError(error),
+        });
+        return null;
+      }
+    });
+
+    return snapshots.filter((item): item is SnapshotDTO => item !== null);
   }
 
   async fetchSymbolList(): Promise<SymbolInfo[]> {
     const results: SymbolInfo[] = [];
+    const startedAt = Date.now();
+    this.logFetchStarted('symbol-list', {});
 
     try {
       const url = `${this.baseUrl}/stock-insight/v1/stock/all`;
@@ -196,9 +298,19 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
         }
       }
     } catch (error: any) {
-      this.logger.error(`Failed to fetch symbol list: ${error.message}`);
+      this.logFetchCompleted('symbol-list', {
+        durationMs: Date.now() - startedAt,
+        status: 'failed',
+        error: toLogError(error),
+      });
       throw error;
     }
+
+    this.logFetchCompleted('symbol-list', {
+      durationMs: Date.now() - startedAt,
+      processed: results.length,
+      status: 'succeeded',
+    });
 
     return results;
   }
@@ -265,5 +377,69 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
     result.setSeconds(0);
     result.setMilliseconds(0);
     return result;
+  }
+
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    worker: (item: T) => Promise<R>,
+  ): Promise<R[]> {
+    if (items.length === 0) {
+      return [];
+    }
+
+    const results = new Array<R>(items.length);
+    const concurrency = Math.min(this.requestConcurrency, items.length);
+    let cursor = 0;
+
+    const runners = Array.from({ length: concurrency }, async () => {
+      while (true) {
+        const currentIndex = cursor;
+        cursor += 1;
+
+        if (currentIndex >= items.length) {
+          return;
+        }
+
+        results[currentIndex] = await worker(items[currentIndex]);
+      }
+    });
+
+    await Promise.all(runners);
+    return results;
+  }
+
+  private logFetchStarted(
+    endpoint: 'intraday' | 'daily' | 'index' | 'snapshot' | 'symbol-list',
+    metadata: Record<string, unknown>,
+  ): void {
+    this.logger.log(
+      logPayload({
+        event: 'tcbs_fetch_started',
+        module: 'data-hub.tcbs-provider',
+        providerCode: this.code,
+        status: 'started',
+        endpoint,
+        ...metadata,
+      }),
+    );
+  }
+
+  private logFetchCompleted(
+    endpoint: 'intraday' | 'daily' | 'index' | 'snapshot' | 'symbol-list',
+    metadata: Record<string, unknown>,
+  ): void {
+    const payload = logPayload({
+      event: 'tcbs_fetch_completed',
+      module: 'data-hub.tcbs-provider',
+      providerCode: this.code,
+      endpoint,
+      ...metadata,
+    });
+
+    if (metadata.status === 'failed') {
+      this.logger.warn(payload);
+      return;
+    }
+    this.logger.log(payload);
   }
 }

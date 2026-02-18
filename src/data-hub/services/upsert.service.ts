@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { createHash } from 'crypto';
+import { logPayload, toLogError } from '../../common/logging/ingestion-log';
 
 export interface UpsertResult {
   inserted: number;
   updated: number;
   skipped: number;
+  processed: number;
 }
 
 @Injectable()
@@ -187,11 +189,22 @@ export class UpsertService {
     updateColumns: string[],
     mapper: (item: T) => Record<string, any>
   ): Promise<UpsertResult> {
-    const result: UpsertResult = { inserted: 0, updated: 0, skipped: 0 };
+    const result: UpsertResult = { inserted: 0, updated: 0, skipped: 0, processed: 0 };
 
     if (items.length === 0) {
       return result;
     }
+
+    this.logger.log(
+      logPayload({
+        event: 'upsert_batch_started',
+        module: 'data-hub.upsert',
+        status: 'started',
+        tableName,
+        batchSize: this.batchSize,
+        itemCount: items.length,
+      }),
+    );
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -210,12 +223,35 @@ export class UpsertService {
         );
         result.inserted += batchResult.inserted;
         result.updated += batchResult.updated;
+        result.processed += batchResult.processed;
       }
 
       await queryRunner.commitTransaction();
+
+      this.logger.log(
+        logPayload({
+          event: 'upsert_batch_completed',
+          module: 'data-hub.upsert',
+          status: 'succeeded',
+          tableName,
+          processed: result.processed,
+          inserted: result.inserted,
+          updated: result.updated,
+          skipped: result.skipped,
+        }),
+      );
     } catch (error: any) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Batch upsert failed for ${tableName}: ${error.message}`);
+      this.logger.error(
+        logPayload({
+          event: 'upsert_batch_failed',
+          module: 'data-hub.upsert',
+          status: 'failed',
+          tableName,
+          conflictColumns,
+          error: toLogError(error),
+        }),
+      );
       throw error;
     } finally {
       await queryRunner.release();
@@ -256,10 +292,21 @@ export class UpsertService {
       VALUES ${valuePlaceholders.join(', ')}
       ON CONFLICT (${conflictColumns.map((c) => `"${c}"`).join(', ')})
       DO UPDATE SET ${updateClause}
+      RETURNING (xmax = 0) AS inserted
     `;
 
-    await queryRunner.query(sql, values);
+    const rows = (await queryRunner.query(sql, values)) as Array<{
+      inserted: boolean | 't' | 'f' | 'true' | 'false';
+    }>;
+    const inserted = rows.reduce((count, row) => {
+      const value = row.inserted;
+      if (value === true || value === 't' || value === 'true') {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+    const updated = rows.length - inserted;
 
-    return { inserted: items.length, updated: 0, skipped: 0 };
+    return { inserted, updated, skipped: 0, processed: rows.length };
   }
 }

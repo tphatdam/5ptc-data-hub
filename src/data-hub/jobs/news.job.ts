@@ -5,6 +5,7 @@ import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { UpsertService } from '../services/upsert.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { subHours } from 'date-fns';
 
@@ -18,6 +19,7 @@ export class NewsJob extends BaseJob {
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
     private readonly upsertService: UpsertService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
   ) {
     super(jobRunService, advisoryLockService, marketHoursService);
@@ -31,22 +33,26 @@ export class NewsJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getNewsProvider();
-    if (!provider) {
+    const providerEntries = await this.providerFactory.getNewsProviderEntries();
+    if (providerEntries.length === 0) {
       this.logger.warn('No news provider available, skipping...');
-      return 0;
-    }
-
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      this.logger.warn(`Data source ${provider.code} not found`);
       return 0;
     }
 
     const lastSuccess = await this.jobRunService.getLastSuccessTime(this.jobName);
     const since = lastSuccess || subHours(new Date(), 2);
 
-    const articles = await provider.fetchLatest(since);
+    const newsFetch = await this.providerAdapter.invokeNews(
+      'fetchLatest',
+      [since],
+      providerEntries.map((entry) => entry.code),
+    );
+    const articles = newsFetch.value;
+    const dataSource = await this.providerFactory.getDataSourceByCode(newsFetch.providerCode);
+    if (!dataSource) {
+      this.logger.warn(`Data source ${newsFetch.providerCode} not found`);
+      return 0;
+    }
 
     if (articles.length === 0) {
       this.logger.debug('No new articles found');

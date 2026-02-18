@@ -1,110 +1,52 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IngestionService } from '../ingestion/ingestion.service';
+import { Response } from 'express';
 import { InternalApiKeyGuard } from '../common/guards/internal-api-key.guard';
-import {
-  EodDailyJob,
-  FundamentalsJob,
-  GapFillJob,
-  GoldJob,
-  IntradayMarketJob,
-  NewsJob,
-  SymbolSyncJob,
-} from '../data-hub/jobs';
+import { RunDailyCompanyUseCase } from '../modules/market-ingestion/application/use-cases/run-daily-company.use-case';
+import { RunQuoteHourlyUseCase } from '../modules/market-ingestion/application/use-cases/run-quote-hourly.use-case';
+
+const V1_SUNSET_DATE = '2026-08-31';
 
 @ApiTags('Triggers')
 @UseGuards(InternalApiKeyGuard)
 @Controller('triggers')
 export class TriggerController {
   constructor(
-    private readonly ingestionService: IngestionService,
-    private readonly intradayMarketJob: IntradayMarketJob,
-    private readonly eodDailyJob: EodDailyJob,
-    private readonly fundamentalsJob: FundamentalsJob,
-    private readonly goldJob: GoldJob,
-    private readonly newsJob: NewsJob,
-    private readonly symbolSyncJob: SymbolSyncJob,
-    private readonly gapFillJob: GapFillJob,
+    private readonly runQuoteHourlyUseCase: RunQuoteHourlyUseCase,
+    private readonly runDailyCompanyUseCase: RunDailyCompanyUseCase,
   ) {}
 
   @Get()
-  listTriggers() {
+  listTriggers(@Res({ passthrough: true }) res: Response) {
+    this.applyDeprecationHeaders(res);
+
     return {
       triggers: [
         { method: 'POST', path: '/triggers/ingestion/quote-hourly' },
         { method: 'POST', path: '/triggers/ingestion/daily-company' },
-        { method: 'POST', path: '/triggers/data-hub/intraday-market' },
-        { method: 'POST', path: '/triggers/data-hub/eod-daily' },
-        { method: 'POST', path: '/triggers/data-hub/fundamentals' },
-        { method: 'POST', path: '/triggers/data-hub/gold' },
-        { method: 'POST', path: '/triggers/data-hub/news' },
-        { method: 'POST', path: '/triggers/data-hub/symbol-sync' },
-        { method: 'POST', path: '/triggers/data-hub/gap-fill' },
       ],
     };
   }
 
   @Post('ingestion/quote-hourly')
-  async triggerQuoteHourly() {
+  async triggerQuoteHourly(@Res({ passthrough: true }) res: Response) {
+    this.applyDeprecationHeaders(res);
     return this.run('quote-hourly', async () => {
-      await this.ingestionService.runQuoteHourly();
+      await this.runQuoteHourlyUseCase.execute();
     });
   }
 
   @Post('ingestion/daily-company')
-  async triggerDailyCompany() {
+  async triggerDailyCompany(@Res({ passthrough: true }) res: Response) {
+    this.applyDeprecationHeaders(res);
     return this.run('daily-company', async () => {
-      await this.ingestionService.runDailyCompany();
+      await this.runDailyCompanyUseCase.execute();
     });
   }
 
-  @Post('data-hub/intraday-market')
-  async triggerIntradayMarket() {
-    return this.run('IntradayMarketJob', async () => {
-      await this.intradayMarketJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/eod-daily')
-  async triggerEodDaily() {
-    return this.run('EodDailyJob', async () => {
-      await this.eodDailyJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/fundamentals')
-  async triggerFundamentals() {
-    return this.run('FundamentalsJob', async () => {
-      await this.fundamentalsJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/gold')
-  async triggerGold() {
-    return this.run('GoldJob', async () => {
-      await this.goldJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/news')
-  async triggerNews() {
-    return this.run('NewsJob', async () => {
-      await this.newsJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/symbol-sync')
-  async triggerSymbolSync() {
-    return this.run('SymbolSyncJob', async () => {
-      await this.symbolSyncJob.handleCron();
-    });
-  }
-
-  @Post('data-hub/gap-fill')
-  async triggerGapFill() {
-    return this.run('GapFillJob', async () => {
-      await this.gapFillJob.handleCron();
-    });
+  private applyDeprecationHeaders(res: Response): void {
+    res.setHeader('x-api-deprecated', 'true');
+    res.setHeader('sunset', V1_SUNSET_DATE);
   }
 
   private async run(job: string, executor: () => Promise<void>) {
@@ -120,4 +62,3 @@ export class TriggerController {
     };
   }
 }
-

@@ -1,11 +1,15 @@
-import { Process, Processor } from "@nestjs/bull";
-import { Job } from "bull";
+import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Job } from "bullmq";
 import { StockReportService } from "../pdf/services/stock-report.service";
 import { StockReportHTMLGeneratorService } from "../pdf/services/stock-report-html-generator.service";
 import { PdfService } from "../pdf/services/pdf.service";
 import { S3Service } from "../common/services/s3.service";
 import { DailyStockReportService } from "./daily-stock-report.service";
 import { QueueService } from "../queue/queue.service";
+import {
+  REPORT_JOB_GENERATE_STOCK,
+  REPORT_QUEUE,
+} from "../queue/queue.constants";
 import { retryStep } from "../utils/retry.utils";
 import { InvestmentRecommendation } from "./daily-stock-report.entity";
 import axios from "axios";
@@ -30,8 +34,8 @@ interface GenerateStockReportJobData {
   email?: string;
 }
 
-@Processor("reportQueue")
-export class ReportProcessor {
+@Processor(REPORT_QUEUE, { concurrency: 2 })
+export class ReportProcessor extends WorkerHost {
   constructor(
     private readonly stockReportService: StockReportService,
     private readonly htmlGeneratorService: StockReportHTMLGeneratorService,
@@ -39,14 +43,20 @@ export class ReportProcessor {
     private readonly s3Service: S3Service,
     private readonly dailyStockReportService: DailyStockReportService,
     private readonly queueService: QueueService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process({ name: "GenerateStockReport", concurrency: 2 })
-  async handleGenerateStockReport(job: Job<GenerateStockReportJobData>) {
+  async process(job: Job<GenerateStockReportJobData>) {
+    if (job.name !== REPORT_JOB_GENERATE_STOCK) {
+      throw new Error(`Unsupported report job "${job.name}"`);
+    }
+
     const { stock, email } = job.data;
+    const queueJobId = job.id ?? 'unknown';
 
     try {
-      const result = await this.executeReportGeneration(stock, email, job.id);
+      const result = await this.executeReportGeneration(stock, email, queueJobId);
       strapi.log.info(`✅ Success`);
       return result;
     } catch (err) {

@@ -6,6 +6,7 @@ import { BaseJob } from './base.job';
 import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { Symbol, Exchange } from '../entities';
 
@@ -18,6 +19,7 @@ export class SymbolSyncJob extends BaseJob {
     jobRunService: JobRunService,
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
@@ -35,12 +37,17 @@ export class SymbolSyncJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getSymbolListProvider('TCBS_API');
-    if (!provider) {
+    const providerEntries = await this.providerFactory.getSymbolListProviderEntries();
+    if (providerEntries.length === 0) {
       throw new Error('No symbol list provider available');
     }
 
-    const symbolList = await provider.fetchSymbolList();
+    const symbolListFetch = await this.providerAdapter.invokeSymbolList(
+      'fetchSymbolList',
+      [],
+      providerEntries.map((entry) => entry.code),
+    );
+    const symbolList = symbolListFetch.value;
     if (symbolList.length === 0) {
       this.logger.warn('No symbols returned from provider');
       return 0;

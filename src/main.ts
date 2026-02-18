@@ -1,6 +1,6 @@
 import './strapi-shim';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
@@ -11,6 +11,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn', 'debug'],
   });
+
+  const logger = new Logger('Bootstrap');
 
   app.enableCors();
 
@@ -23,7 +25,7 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
     if (req.is('json')) {
       req.body = req.body || {};
     }
@@ -45,9 +47,9 @@ async function bootstrap() {
   const port = process.env.PORT || 5000;
   await app.listen(port, '0.0.0.0');
 
-  strapi.log.info(`PDF Generator service running on port ${port}`);
-  strapi.log.info(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
-  strapi.log.info('Server ready - browser will initialize on first PDF request');
+  logger.log(`PDF Generator service running on port ${port}`);
+  logger.log(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
+  logger.log('Server ready - browser will initialize on first PDF request');
 }
 
 bootstrap();

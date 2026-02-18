@@ -1,0 +1,1 @@
+export const MARKET_INGESTION_PORT = Symbol('MARKET_INGESTION_PORT');

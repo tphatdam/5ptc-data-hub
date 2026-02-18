@@ -1,5 +1,7 @@
 export * from './base.job';
 export * from './intraday-market.job';
+export * from './intraday-market.processor';
+export * from './intraday-market.types';
 export * from './eod-daily.job';
 export * from './fundamentals.job';
 export * from './gold.job';

@@ -6,15 +6,38 @@ import { SymbolsRepository } from '../../../src/symbols/symbols.repository';
 import { QuoteDailyRepository } from '../../../src/quotes/quote-daily.repository';
 import { QuoteIntradayRepository } from '../../../src/quotes/quote-intraday.repository';
 import { CrawlRunsRepository } from '../../../src/ingestion/crawl-runs.repository';
+import { ForeignTradingDailyRepository } from '../../../src/company-data/foreign-trading-daily.repository';
+import { InsiderTradingEventRepository } from '../../../src/company-data/insider-trading-event.repository';
+import { StockRelatedPeerRepository } from '../../../src/company-data/stock-related-peer.repository';
+import { CompanySubsidiaryRepository } from '../../../src/company-data/company-subsidiary.repository';
+import { NewsArticleRepository } from '../../../src/company-data/news-article.repository';
+import { CompanyReportRepository } from '../../../src/company-data/company-report.repository';
+import { SimplizeService } from '../../../src/providers/simplize/simplize.service';
 
-/**
- * Unit tests for ScheduleModule configuration in IngestionService
- * Validates Requirements 8.1, 8.4
- */
 describe('IngestionService - Schedule Configuration', () => {
   let service: IngestionService;
   let configService: ConfigService;
   let schedulerRegistry: SchedulerRegistry;
+
+  const baseProviders = [
+    { provide: SymbolsRepository, useValue: {} },
+    { provide: QuoteDailyRepository, useValue: {} },
+    { provide: QuoteIntradayRepository, useValue: {} },
+    { provide: ForeignTradingDailyRepository, useValue: {} },
+    { provide: InsiderTradingEventRepository, useValue: {} },
+    { provide: StockRelatedPeerRepository, useValue: {} },
+    { provide: CompanySubsidiaryRepository, useValue: {} },
+    { provide: NewsArticleRepository, useValue: {} },
+    { provide: CompanyReportRepository, useValue: {} },
+    { provide: SimplizeService, useValue: {} },
+    { provide: CrawlRunsRepository, useValue: {} },
+    {
+      provide: 'MarketProvider',
+      useValue: {
+        name: 'TestProvider',
+      },
+    },
+  ];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,8 +48,8 @@ describe('IngestionService - Schedule Configuration', () => {
           useValue: {
             get: jest.fn((key: string) => {
               const config: Record<string, string> = {
-                'schedule.intradayCron': '*/15 * * * *',
-                'schedule.dailyEodCron': '5 18 * * *',
+                'schedule.quoteHourlyCron': '0 * * * *',
+                'schedule.dailyCompanyCron': '0 18 * * *',
                 'schedule.timezone': 'Asia/Ho_Chi_Minh',
               };
               return config[key];
@@ -40,28 +63,7 @@ describe('IngestionService - Schedule Configuration', () => {
             getCronJob: jest.fn(),
           },
         },
-        {
-          provide: SymbolsRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteDailyRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteIntradayRepository,
-          useValue: {},
-        },
-        {
-          provide: CrawlRunsRepository,
-          useValue: {},
-        },
-        {
-          provide: 'MarketProvider',
-          useValue: {
-            name: 'TestProvider',
-          },
-        },
+        ...baseProviders,
       ],
     }).compile();
 
@@ -74,30 +76,19 @@ describe('IngestionService - Schedule Configuration', () => {
     expect(service).toBeDefined();
   });
 
-  it('should register intraday job with configured cron expression', () => {
-    // Trigger onModuleInit
+  it('should register quote-hourly job with configured cron expression', () => {
     service.onModuleInit();
 
-    // Verify that addCronJob was called for intraday job
-    expect(schedulerRegistry.addCronJob).toHaveBeenCalledWith(
-      'intraday-15m',
-      expect.any(Object),
-    );
+    expect(schedulerRegistry.addCronJob).toHaveBeenCalledWith('quote-hourly', expect.any(Object));
   });
 
-  it('should register daily EOD job with configured cron expression', () => {
-    // Trigger onModuleInit
+  it('should register daily-company job with configured cron expression', () => {
     service.onModuleInit();
 
-    // Verify that addCronJob was called for daily EOD job
-    expect(schedulerRegistry.addCronJob).toHaveBeenCalledWith(
-      'daily-eod',
-      expect.any(Object),
-    );
+    expect(schedulerRegistry.addCronJob).toHaveBeenCalledWith('daily-company', expect.any(Object));
   });
 
   it('should use default cron expressions when config is not provided', async () => {
-    // Create a new module with config that returns undefined
     const moduleWithDefaults: TestingModule = await Test.createTestingModule({
       providers: [
         IngestionService,
@@ -114,49 +105,23 @@ describe('IngestionService - Schedule Configuration', () => {
             getCronJob: jest.fn(),
           },
         },
-        {
-          provide: SymbolsRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteDailyRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteIntradayRepository,
-          useValue: {},
-        },
-        {
-          provide: CrawlRunsRepository,
-          useValue: {},
-        },
-        {
-          provide: 'MarketProvider',
-          useValue: {
-            name: 'TestProvider',
-          },
-        },
+        ...baseProviders,
       ],
     }).compile();
 
-    const serviceWithDefaults =
-      moduleWithDefaults.get<IngestionService>(IngestionService);
-    const schedulerRegistryWithDefaults =
-      moduleWithDefaults.get<SchedulerRegistry>(SchedulerRegistry);
+    const serviceWithDefaults = moduleWithDefaults.get<IngestionService>(IngestionService);
+    const schedulerRegistryWithDefaults = moduleWithDefaults.get<SchedulerRegistry>(SchedulerRegistry);
 
-    // Trigger onModuleInit
     serviceWithDefaults.onModuleInit();
 
-    // Verify that jobs were still registered (with default values)
     expect(schedulerRegistryWithDefaults.addCronJob).toHaveBeenCalledTimes(2);
   });
 
-  it('should use custom cron expressions from environment variables', async () => {
-    const customIntradayCron = '*/30 * * * *';
-    const customDailyEodCron = '0 19 * * *';
+  it('should use custom cron expressions from configuration', async () => {
+    const customQuoteHourlyCron = '*/30 * * * *';
+    const customDailyCompanyCron = '0 19 * * *';
     const customTimezone = 'America/New_York';
 
-    // Create a new module with custom config
     const moduleWithCustom: TestingModule = await Test.createTestingModule({
       providers: [
         IngestionService,
@@ -165,8 +130,8 @@ describe('IngestionService - Schedule Configuration', () => {
           useValue: {
             get: jest.fn((key: string) => {
               const config: Record<string, string> = {
-                'schedule.intradayCron': customIntradayCron,
-                'schedule.dailyEodCron': customDailyEodCron,
+                'schedule.quoteHourlyCron': customQuoteHourlyCron,
+                'schedule.dailyCompanyCron': customDailyCompanyCron,
                 'schedule.timezone': customTimezone,
               };
               return config[key];
@@ -180,48 +145,17 @@ describe('IngestionService - Schedule Configuration', () => {
             getCronJob: jest.fn(),
           },
         },
-        {
-          provide: SymbolsRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteDailyRepository,
-          useValue: {},
-        },
-        {
-          provide: QuoteIntradayRepository,
-          useValue: {},
-        },
-        {
-          provide: CrawlRunsRepository,
-          useValue: {},
-        },
-        {
-          provide: 'MarketProvider',
-          useValue: {
-            name: 'TestProvider',
-          },
-        },
+        ...baseProviders,
       ],
     }).compile();
 
-    const serviceWithCustom =
-      moduleWithCustom.get<IngestionService>(IngestionService);
-    const configServiceWithCustom =
-      moduleWithCustom.get<ConfigService>(ConfigService);
+    const serviceWithCustom = moduleWithCustom.get<IngestionService>(IngestionService);
+    const configServiceWithCustom = moduleWithCustom.get<ConfigService>(ConfigService);
 
-    // Trigger onModuleInit
     serviceWithCustom.onModuleInit();
 
-    // Verify that config service was called with correct keys
-    expect(configServiceWithCustom.get).toHaveBeenCalledWith(
-      'schedule.intradayCron',
-    );
-    expect(configServiceWithCustom.get).toHaveBeenCalledWith(
-      'schedule.dailyEodCron',
-    );
-    expect(configServiceWithCustom.get).toHaveBeenCalledWith(
-      'schedule.timezone',
-    );
+    expect(configServiceWithCustom.get).toHaveBeenCalledWith('schedule.quoteHourlyCron');
+    expect(configServiceWithCustom.get).toHaveBeenCalledWith('schedule.dailyCompanyCron');
+    expect(configServiceWithCustom.get).toHaveBeenCalledWith('schedule.timezone');
   });
 });

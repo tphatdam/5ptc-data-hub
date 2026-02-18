@@ -7,6 +7,7 @@ import { JobRunService } from '../services/job-run.service';
 import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { UpsertService } from '../services/upsert.service';
+import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
 import { Symbol } from '../entities';
 
@@ -20,6 +21,7 @@ export class FundamentalsJob extends BaseJob {
     advisoryLockService: AdvisoryLockService,
     marketHoursService: MarketHoursService,
     private readonly upsertService: UpsertService,
+    private readonly providerAdapter: DynamicProviderAdapter,
     private readonly providerFactory: ProviderFactoryService,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
@@ -35,16 +37,6 @@ export class FundamentalsJob extends BaseJob {
   }
 
   private async execute(): Promise<number> {
-    const provider = await this.providerFactory.getFundamentalsProvider('TCBS_API');
-    if (!provider) {
-      throw new Error('No fundamentals provider available');
-    }
-
-    const dataSource = await this.providerFactory.getDataSourceByCode(provider.code);
-    if (!dataSource) {
-      throw new Error(`Data source ${provider.code} not found`);
-    }
-
     const activeSymbols = await this.symbolRepository.find({
       where: { isActive: true },
     });
@@ -56,7 +48,17 @@ export class FundamentalsJob extends BaseJob {
 
     for (let i = 0; i < tickers.length; i += batchSize) {
       const batch = tickers.slice(i, i + batchSize);
-      const snapshots = await provider.fetchSnapshots(batch);
+      const snapshotFetch = await this.providerAdapter.invokeFundamentals(
+        'fetchSnapshots',
+        [batch],
+      );
+      const snapshots = snapshotFetch.value;
+      const dataSource = await this.providerFactory.getDataSourceByCode(
+        snapshotFetch.providerCode,
+      );
+      if (!dataSource) {
+        throw new Error(`Data source ${snapshotFetch.providerCode} not found`);
+      }
 
       if (snapshots.length > 0) {
         const snapshotRecords = snapshots

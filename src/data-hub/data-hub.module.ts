@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
+import { QueueModule } from '../queue/queue.module';
 
 import {
   DataSource,
@@ -27,11 +28,14 @@ import {
 
 import {
   TcbsProvider,
+  ProviderRegistryService,
   ProviderFactoryService,
+  DynamicProviderAdapter,
 } from './providers';
 
 import {
   IntradayMarketJob,
+  IntradayMarketProcessor,
   EodDailyJob,
   FundamentalsJob,
   GoldJob,
@@ -66,11 +70,14 @@ const services = [
 
 const providers = [
   TcbsProvider,
+  ProviderRegistryService,
   ProviderFactoryService,
+  DynamicProviderAdapter,
 ];
 
 const jobs = [
   IntradayMarketJob,
+  IntradayMarketProcessor,
   EodDailyJob,
   FundamentalsJob,
   GoldJob,
@@ -84,6 +91,7 @@ const jobs = [
     ConfigModule,
     ScheduleModule.forRoot(),
     TypeOrmModule.forFeature(entities),
+    QueueModule,
   ],
   controllers: [DataHubController],
   providers: [...services, ...providers, ...jobs],

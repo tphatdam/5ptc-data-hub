@@ -6,17 +6,14 @@ import { PinoLogger } from 'nestjs-pino';
 import { SeedService } from '../../../src/seed/seed.service';
 import { SStockSeedSource } from '../../../src/seed/sources/sstock.source';
 import { StaticSeedSource } from '../../../src/seed/sources/static.source';
-import { Exchange, MarketIndex, Symbol } from '../../../src/data-hub/entities';
+import { Symbol } from '../../../src/db/entities/symbol.entity';
 
 describe('SeedService', () => {
   let service: SeedService;
-  let exchangeRepo: { upsert: jest.Mock; find: jest.Mock };
   let symbolRepo: { upsert: jest.Mock };
-  let marketIndexRepo: { upsert: jest.Mock };
   let dataSource: { query: jest.Mock };
   let staticSource: { fetchAll: jest.Mock };
   let sstockSource: { fetchAll: jest.Mock };
-  let configService: { get: jest.Mock };
 
   const mockSeedData = {
     exchanges: [
@@ -27,19 +24,16 @@ describe('SeedService', () => {
       { ticker: 'VCB', exchangeCode: 'HOSE', companyName: 'Vietcombank' },
       { ticker: 'VNM', exchangeCode: 'HOSE', companyName: 'Vinamilk' },
     ],
-    indices: [
-      { code: 'VNINDEX', name: 'VN Index', exchangeCode: 'HOSE' },
-    ],
+    indices: [{ code: 'VNINDEX', name: 'VN Index', exchangeCode: 'HOSE' }],
   };
 
   beforeEach(async () => {
-    exchangeRepo = { upsert: jest.fn().mockResolvedValue(undefined), find: jest.fn().mockResolvedValue([{ id: 1, code: 'HOSE' }, { id: 2, code: 'HNX' }]) };
     symbolRepo = { upsert: jest.fn().mockResolvedValue(undefined) };
-    marketIndexRepo = { upsert: jest.fn().mockResolvedValue(undefined) };
     dataSource = { query: jest.fn().mockResolvedValue([{ acquired: true }]) };
     staticSource = { fetchAll: jest.fn().mockResolvedValue(mockSeedData) };
     sstockSource = { fetchAll: jest.fn().mockResolvedValue(mockSeedData) };
-    configService = {
+
+    const configService = {
       get: jest.fn((key: string) => {
         const map: Record<string, unknown> = {
           'seed.source': 'sstock',
@@ -54,31 +48,31 @@ describe('SeedService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SeedService,
-        { provide: getRepositoryToken(Exchange), useValue: exchangeRepo },
         { provide: getRepositoryToken(Symbol), useValue: symbolRepo },
-        { provide: getRepositoryToken(MarketIndex), useValue: marketIndexRepo },
         { provide: DataSource, useValue: dataSource },
         { provide: ConfigService, useValue: configService },
         { provide: SStockSeedSource, useValue: sstockSource },
         { provide: StaticSeedSource, useValue: staticSource },
-        { provide: PinoLogger, useValue: { setContext: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } },
+        {
+          provide: PinoLogger,
+          useValue: { setContext: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        },
       ],
     }).compile();
 
     service = module.get<SeedService>(SeedService);
   });
 
-  it('should acquire advisory lock and run upserts when source returns data', async () => {
+  it('should acquire advisory lock and run symbol upserts when source returns data', async () => {
     await service.run({ source: 'static' });
 
-    expect(dataSource.query).toHaveBeenCalledWith('SELECT pg_try_advisory_lock($1) as acquired', [987654321]);
+    expect(dataSource.query).toHaveBeenCalledWith('SELECT pg_try_advisory_lock($1) as acquired', [
+      987654321,
+    ]);
     expect(staticSource.fetchAll).toHaveBeenCalled();
-    expect(exchangeRepo.upsert).toHaveBeenCalledWith(mockSeedData.exchanges, ['code']);
-    expect(exchangeRepo.find).toHaveBeenCalled();
-    expect(symbolRepo.upsert).toHaveBeenCalled();
-    expect(marketIndexRepo.upsert).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ code: 'VNINDEX', name: 'VN Index' })]),
-      ['code'],
+    expect(symbolRepo.upsert).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ symbol: 'VCB', exchange: 'HOSE' })]),
+      ['symbol'],
     );
     expect(dataSource.query).toHaveBeenCalledWith('SELECT pg_advisory_unlock($1)', [987654321]);
   });
@@ -89,7 +83,7 @@ describe('SeedService', () => {
     await service.run({ source: 'static' });
 
     expect(staticSource.fetchAll).toHaveBeenCalled();
-    expect(exchangeRepo.upsert).not.toHaveBeenCalled();
+    expect(symbolRepo.upsert).not.toHaveBeenCalled();
   });
 
   it('should fallback to static source on sstock failure when fallback is true', async () => {
@@ -99,7 +93,7 @@ describe('SeedService', () => {
 
     expect(sstockSource.fetchAll).toHaveBeenCalled();
     expect(staticSource.fetchAll).toHaveBeenCalled();
-    expect(exchangeRepo.upsert).toHaveBeenCalled();
+    expect(symbolRepo.upsert).toHaveBeenCalled();
   });
 
   it('should throw when sstock fails and fallback is false', async () => {

@@ -3,8 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
-import { Exchange, MarketIndex, Symbol } from '../data-hub/entities';
-import { SeedSource } from './sources/seed.source.interface';
+import { Symbol } from '../db/entities/symbol.entity';
 import { SStockSeedSource } from './sources/sstock.source';
 import { StaticSeedSource } from './sources/static.source';
 import type { SeedData } from './sources/seed.source.interface';
@@ -17,12 +16,8 @@ export interface SeedRunOptions {
 @Injectable()
 export class SeedService {
   constructor(
-    @InjectRepository(Exchange)
-    private readonly exchangeRepository: Repository<Exchange>,
     @InjectRepository(Symbol)
     private readonly symbolRepository: Repository<Symbol>,
-    @InjectRepository(MarketIndex)
-    private readonly marketIndexRepository: Repository<MarketIndex>,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
     private readonly sstockSource: SStockSeedSource,
@@ -69,18 +64,8 @@ export class SeedService {
     }
 
     try {
-      await this.upsertExchanges(seedData.exchanges);
-      const exchangeIdByCode = await this.getExchangeIdMap();
-      await this.upsertSymbols(seedData.symbols, exchangeIdByCode, batchSize);
-      await this.upsertIndices(seedData.indices, exchangeIdByCode);
-      this.logger.info(
-        {
-          exchanges: seedData.exchanges.length,
-          symbols: seedData.symbols.length,
-          indices: seedData.indices.length,
-        },
-        'Seed completed',
-      );
+      await this.upsertSymbols(seedData.symbols, batchSize);
+      this.logger.info({ symbols: seedData.symbols.length }, 'Seed completed');
     } finally {
       await this.releaseAdvisoryLock(lockKey);
     }
@@ -98,65 +83,32 @@ export class SeedService {
     await this.dataSource.query('SELECT pg_advisory_unlock($1)', [lockKey]);
   }
 
-  private async upsertExchanges(
-    exchanges: { code: string; name: string }[],
-  ): Promise<void> {
-    if (exchanges.length === 0) return;
-    await this.exchangeRepository.upsert(exchanges, ['code']);
-    this.logger.info({ count: exchanges.length }, 'Upserted exchanges');
-  }
-
-  private async getExchangeIdMap(): Promise<Map<string, number>> {
-    const list = await this.exchangeRepository.find({
-      select: ['id', 'code'],
-    });
-    return new Map(list.map((e) => [e.code, e.id]));
-  }
-
   private async upsertSymbols(
-    symbols: { ticker: string; exchangeCode: string; companyName?: string; industry?: string; isin?: string; listedAt?: Date }[],
-    exchangeIdByCode: Map<string, number>,
+    symbols: {
+      ticker: string;
+      exchangeCode: string;
+      companyName?: string;
+      industry?: string;
+      isin?: string;
+      listedAt?: Date;
+    }[],
     batchSize: number,
   ): Promise<void> {
-    const rows = symbols
-      .map((s) => {
-        const exchangeId = exchangeIdByCode.get(s.exchangeCode);
-        if (exchangeId == null) return null;
-        return {
-          ticker: s.ticker,
-          exchangeId,
-          companyName: s.companyName ?? undefined,
-          industry: s.industry ?? undefined,
-          isin: s.isin ?? undefined,
-          isActive: true,
-          listedAt: s.listedAt ?? undefined,
-        };
-      })
-      .filter((r): r is NonNullable<typeof r> => r != null);
+    const rows = symbols.map((s) => ({
+      symbol: s.ticker,
+      exchange: s.exchangeCode,
+      name: s.companyName ?? undefined,
+      industryCode: s.industry ?? undefined,
+      status: 'ACTIVE',
+    }));
 
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      await this.symbolRepository.upsert(batch, ['ticker']);
+      await this.symbolRepository.upsert(batch, ['symbol']);
       this.logger.info(
         { batch: Math.floor(i / batchSize) + 1, total: rows.length },
         'Seed symbols batch',
       );
     }
-  }
-
-  private async upsertIndices(
-    indices: { code: string; name: string; exchangeCode?: string }[],
-    exchangeIdByCode: Map<string, number>,
-  ): Promise<void> {
-    if (indices.length === 0) return;
-    const rows = indices.map((idx) => ({
-      code: idx.code,
-      name: idx.name,
-      exchangeId: idx.exchangeCode
-        ? exchangeIdByCode.get(idx.exchangeCode) ?? undefined
-        : undefined,
-    }));
-    await this.marketIndexRepository.upsert(rows, ['code']);
-    this.logger.info({ count: indices.length }, 'Upserted indices');
   }
 }
