@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IngestionService } from '../../../../ingestion/ingestion.service';
+import { IngestionService } from '../../../ingestion/ingestion.service';
 import { MarketIngestionPort } from '../../domain/ports/market-ingestion.port';
 
 @Injectable()

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { CrawlRunsRepository } from '../../../src/ingestion/crawl-runs.repository';
+import { CrawlRunsRepository } from '../../../src/modules/ingestion/crawl-runs.repository';
 import { CrawlRun, CrawlRunStatus } from '../../../src/db/entities/crawl-run.entity';
 import { Repository } from 'typeorm';
 

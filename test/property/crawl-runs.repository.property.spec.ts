@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { CrawlRunsRepository } from '../../src/ingestion/crawl-runs.repository';
+import { CrawlRunsRepository } from '../../src/modules/ingestion/crawl-runs.repository';
 import { CrawlRun, CrawlRunStatus } from '../../src/db/entities/crawl-run.entity';
 import { Symbol } from '../../src/db/entities/symbol.entity';
 import { QuoteDaily } from '../../src/db/entities/quote-daily.entity';

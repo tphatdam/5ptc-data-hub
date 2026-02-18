@@ -3,9 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { PinoLogger } from 'nestjs-pino';
-import { SeedService } from '../../../src/seed/seed.service';
-import { SStockSeedSource } from '../../../src/seed/sources/sstock.source';
-import { StaticSeedSource } from '../../../src/seed/sources/static.source';
+import { SeedService } from '../../../src/modules/seed/seed.service';
+import { SStockSeedSource } from '../../../src/modules/seed/sources/sstock.source';
+import { StaticSeedSource } from '../../../src/modules/seed/sources/static.source';
 import { Symbol } from '../../../src/db/entities/symbol.entity';
 
 describe('SeedService', () => {

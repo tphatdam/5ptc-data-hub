@@ -1,5 +1,5 @@
-import { MarketProvider } from '../../../src/providers/market-provider.interface';
-import { SymbolDTO, DailyBarDTO, IntradayTickDTO } from '../../../src/providers/dtos';
+import { MarketProvider } from '../../../src/modules/providers/market-provider.interface';
+import { SymbolDTO, DailyBarDTO, IntradayTickDTO } from '../../../src/modules/providers/dtos';
 
 describe('MarketProvider Interface', () => {
   it('should be implementable by a concrete class', () => {

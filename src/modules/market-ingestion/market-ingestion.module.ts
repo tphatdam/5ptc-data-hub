@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { IngestionModule } from '../../ingestion/ingestion.module';
+import { IngestionModule } from '../ingestion/ingestion.module';
 import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 import { RunQuoteHourlyUseCase } from './application/use-cases/run-quote-hourly.use-case';
 import { RunDailyCompanyUseCase } from './application/use-cases/run-daily-company.use-case';

@@ -2,7 +2,7 @@ import * as fc from 'fast-check';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { HttpClientService } from '../../src/providers/http-client.service';
+import { HttpClientService } from '../../src/modules/providers/http-client.service';
 import { of, throwError } from 'rxjs';
 import { AxiosError, AxiosResponse } from 'axios';
 

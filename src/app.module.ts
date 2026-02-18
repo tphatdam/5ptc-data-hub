@@ -3,16 +3,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
-import { PdfModule } from './pdf/pdf.module';
-import { AiModule } from './ai/ai.module';
-import { HealthModule } from './health/health.module';
-import { BrevoModule } from './brevo/brevo.module';
-import { QueueModule } from './queue/queue.module';
-import { DailyStockReportModule } from './daily-stock-report/daily-stock-report.module';
-import { QuotesModule } from './quotes/quotes.module';
-import { ProvidersModule } from './providers/providers.module';
-import { IngestionModule } from './ingestion/ingestion.module';
-import { SeedModule } from './seed/seed.module';
+import { AiModule } from './modules/ai/ai.module';
+import { HealthModule } from './modules/health/health.module';
+import { BrevoModule } from './modules/brevo/brevo.module';
+import { QueueModule } from './modules/queue/queue.module';
+import { ReportingModule } from './modules/reporting/reporting.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
+import { ProvidersModule } from './modules/providers/providers.module';
+import { IngestionModule } from './modules/ingestion/ingestion.module';
+import { SeedModule } from './modules/seed/seed.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
 import { validate } from './config/validate-env';
@@ -74,10 +73,9 @@ import { CompanyIntelModule } from './modules/company-intel/company-intel.module
     }),
     QueueModule,
     BrevoModule,
-    PdfModule,
+    ReportingModule,
     AiModule,
     HealthModule,
-    DailyStockReportModule,
     QuotesModule,
     ProvidersModule,
     IngestionModule,

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { VciProvider } from '../../../src/providers/vci/vci.provider';
-import { HttpClientService } from '../../../src/providers/http-client.service';
+import { VciProvider } from '../../../src/modules/providers/vci/vci.provider';
+import { HttpClientService } from '../../../src/modules/providers/http-client.service';
 
 describe('VciProvider', () => {
   let provider: VciProvider;

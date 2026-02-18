@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { QuoteDailyRepository } from '../../src/quotes/quote-daily.repository';
+import { QuoteDailyRepository } from '../../src/modules/quotes/quote-daily.repository';
 import { Symbol } from '../../src/db/entities/symbol.entity';
 import { QuoteDaily } from '../../src/db/entities/quote-daily.entity';
 import { QuoteIntraday } from '../../src/db/entities/quote-intraday.entity';

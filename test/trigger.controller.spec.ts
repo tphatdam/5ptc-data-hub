@@ -1,19 +1,21 @@
 import { Test } from '@nestjs/testing';
-import { TriggerController } from '../src/trigger/trigger.controller';
+import { ConfigModule } from '@nestjs/config';
+import { MarketTriggersV1CompatController } from '../src/modules/market-ingestion/presentation/controllers/market-triggers-v1-compat.controller';
 import { RunQuoteHourlyUseCase } from '../src/modules/market-ingestion/application/use-cases/run-quote-hourly.use-case';
 import { RunDailyCompanyUseCase } from '../src/modules/market-ingestion/application/use-cases/run-daily-company.use-case';
 import { InternalApiKeyGuard } from '../src/common/guards/internal-api-key.guard';
 
-describe('TriggerController', () => {
+describe('MarketTriggersV1CompatController (legacy /triggers API)', () => {
   const runQuoteHourlyUseCase = { execute: jest.fn(async () => undefined) };
   const runDailyCompanyUseCase = { execute: jest.fn(async () => undefined) };
 
-  let controller: TriggerController;
+  let controller: MarketTriggersV1CompatController;
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
-      controllers: [TriggerController],
+      imports: [ConfigModule.forRoot({ ignoreEnvFile: true })],
+      controllers: [MarketTriggersV1CompatController],
       providers: [
         { provide: RunQuoteHourlyUseCase, useValue: runQuoteHourlyUseCase },
         { provide: RunDailyCompanyUseCase, useValue: runDailyCompanyUseCase },
@@ -21,7 +23,7 @@ describe('TriggerController', () => {
       ],
     }).compile();
 
-    controller = moduleRef.get(TriggerController);
+    controller = moduleRef.get(MarketTriggersV1CompatController);
   });
 
   it('lists triggers', () => {
@@ -29,7 +31,7 @@ describe('TriggerController', () => {
     const result = controller.listTriggers(res);
 
     expect(Array.isArray(result.triggers)).toBe(true);
-    expect(result.triggers).toHaveLength(2);
+    expect(result.triggers).toHaveLength(4);
     expect(res.setHeader).toHaveBeenCalledWith('x-api-deprecated', 'true');
   });
 

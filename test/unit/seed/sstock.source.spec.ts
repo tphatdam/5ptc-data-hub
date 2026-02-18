@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
-import { SStockSeedSource } from '../../../src/seed/sources/sstock.source';
-import { SeedHttpClient } from '../../../src/seed/http/seed-http.client';
+import { SStockSeedSource } from '../../../src/modules/seed/sources/sstock.source';
+import { SeedHttpClient } from '../../../src/modules/seed/http/seed-http.client';
 import * as fs from 'fs';
 import * as path from 'path';
 

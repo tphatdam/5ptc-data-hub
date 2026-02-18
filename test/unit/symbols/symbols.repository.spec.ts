@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { SymbolsRepository } from '../../../src/symbols/symbols.repository';
+import { SymbolsRepository } from '../../../src/modules/symbols/symbols.repository';
 import { Symbol } from '../../../src/db/entities/symbol.entity';
 import { Repository, ILike } from 'typeorm';
 

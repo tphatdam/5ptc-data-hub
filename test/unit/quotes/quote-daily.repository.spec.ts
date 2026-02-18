@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
-import { QuoteDailyRepository } from '../../../src/quotes/quote-daily.repository';
+import { QuoteDailyRepository } from '../../../src/modules/quotes/quote-daily.repository';
 import { QuoteDaily } from '../../../src/db/entities/quote-daily.entity';
 
 describe('QuoteDailyRepository', () => {

@@ -1,6 +1,6 @@
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { SymbolDTO, DailyBarDTO, IntradayTickDTO } from '../../../src/providers/dtos';
+import { SymbolDTO, DailyBarDTO, IntradayTickDTO } from '../../../src/modules/providers/dtos';
 
 describe('Provider DTOs', () => {
   describe('SymbolDTO', () => {

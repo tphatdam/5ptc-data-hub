@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { IngestionService } from '../../../src/ingestion/ingestion.service';
-import { SymbolsRepository } from '../../../src/symbols/symbols.repository';
-import { QuoteDailyRepository } from '../../../src/quotes/quote-daily.repository';
-import { QuoteIntradayRepository } from '../../../src/quotes/quote-intraday.repository';
-import { CrawlRunsRepository } from '../../../src/ingestion/crawl-runs.repository';
-import { ForeignTradingDailyRepository } from '../../../src/company-data/foreign-trading-daily.repository';
-import { InsiderTradingEventRepository } from '../../../src/company-data/insider-trading-event.repository';
-import { StockRelatedPeerRepository } from '../../../src/company-data/stock-related-peer.repository';
-import { CompanySubsidiaryRepository } from '../../../src/company-data/company-subsidiary.repository';
-import { NewsArticleRepository } from '../../../src/company-data/news-article.repository';
-import { CompanyReportRepository } from '../../../src/company-data/company-report.repository';
-import { SimplizeService } from '../../../src/providers/simplize/simplize.service';
+import { IngestionService } from '../../../src/modules/ingestion/ingestion.service';
+import { SymbolsRepository } from '../../../src/modules/symbols/symbols.repository';
+import { QuoteDailyRepository } from '../../../src/modules/quotes/quote-daily.repository';
+import { QuoteIntradayRepository } from '../../../src/modules/quotes/quote-intraday.repository';
+import { CrawlRunsRepository } from '../../../src/modules/ingestion/crawl-runs.repository';
+import { ForeignTradingDailyRepository } from '../../../src/modules/company-data/foreign-trading-daily.repository';
+import { InsiderTradingEventRepository } from '../../../src/modules/company-data/insider-trading-event.repository';
+import { StockRelatedPeerRepository } from '../../../src/modules/company-data/stock-related-peer.repository';
+import { CompanySubsidiaryRepository } from '../../../src/modules/company-data/company-subsidiary.repository';
+import { NewsArticleRepository } from '../../../src/modules/company-data/news-article.repository';
+import { CompanyReportRepository } from '../../../src/modules/company-data/company-report.repository';
+import { SimplizeService } from '../../../src/modules/providers/simplize/simplize.service';
 
 describe('IngestionService - Schedule Configuration', () => {
   let service: IngestionService;
