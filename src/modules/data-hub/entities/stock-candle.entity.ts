@@ -53,6 +53,24 @@ export class StockCandle {
   @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
   value: string;
 
+  @Column({ type: 'bigint', name: 'foreign_buy_volume', nullable: true })
+  foreignBuyVolume: string;
+
+  @Column({ type: 'bigint', name: 'foreign_sell_volume', nullable: true })
+  foreignSellVolume: string;
+
+  @Column({ type: 'bigint', name: 'foreign_net_volume', nullable: true })
+  foreignNetVolume: string;
+
+  @Column({ type: 'bigint', name: 'put_through_volume', nullable: true })
+  putThroughVolume: string;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, name: 'put_through_value', nullable: true })
+  putThroughValue: string;
+
+  @Column({ type: 'bigint', name: 'total_trades', nullable: true })
+  totalTrades: string;
+
   @Column({ name: 'source_id' })
   sourceId: number;
 

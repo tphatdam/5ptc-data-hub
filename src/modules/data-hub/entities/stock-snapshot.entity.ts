@@ -29,6 +29,21 @@ export class StockSnapshot {
   @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
   pe: string;
 
+  @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+  pb: string;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+  ps: string;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+  roe: string;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+  roa: string;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  ev: string;
+
   @Column({ type: 'numeric', precision: 18, scale: 4, nullable: true })
   eps: string;
 
@@ -40,6 +55,21 @@ export class StockSnapshot {
 
   @Column({ type: 'bigint', name: 'shares_out', nullable: true })
   sharesOut: string;
+
+  @Column({ type: 'bigint', name: 'foreign_room', nullable: true })
+  foreignRoom: string;
+
+  @Column({ type: 'bigint', name: 'foreign_holding_room', nullable: true })
+  foreignHoldingRoom: string;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, name: 'current_holding_ratio', nullable: true })
+  currentHoldingRatio: string;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, name: 'max_holding_ratio', nullable: true })
+  maxHoldingRatio: string;
+
+  @Column({ type: 'bigint', name: 'avg_match_volume_2w', nullable: true })
+  avgMatchVolume2w: string;
 
   @Column({ name: 'source_id' })
   sourceId: number;

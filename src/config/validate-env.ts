@@ -5,10 +5,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   Max,
   Min,
-  ValidateIf,
   validateSync,
 } from 'class-validator';
 import { plainToClass } from 'class-transformer';
@@ -27,36 +25,15 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   LOG_LEVEL: string;
 
-  // Database configuration - either DATABASE_URL or discrete variables
-  @IsOptional()
-  @IsString()
-  DATABASE_URL?: string;
-
-  @ValidateIf((o) => !o.DATABASE_URL)
+  // Database - DATABASE_URL required
   @IsString()
   @IsNotEmpty()
-  DB_HOST?: string;
+  DATABASE_URL: string;
 
-  @ValidateIf((o) => !o.DATABASE_URL)
-  @IsInt()
-  @Min(1)
-  @Max(65535)
-  DB_PORT?: number;
-
-  @ValidateIf((o) => !o.DATABASE_URL)
+  // Redis - REDIS_URL required
   @IsString()
   @IsNotEmpty()
-  DB_USER?: string;
-
-  @ValidateIf((o) => !o.DATABASE_URL)
-  @IsString()
-  @IsNotEmpty()
-  DB_PASS?: string;
-
-  @ValidateIf((o) => !o.DATABASE_URL)
-  @IsString()
-  @IsNotEmpty()
-  DB_NAME?: string;
+  REDIS_URL: string;
 
   // Optional HTTP configuration
   @IsOptional()

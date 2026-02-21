@@ -1,4 +1,4 @@
-envimport * as fs from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
 
 describe('Environment Template Configuration', () => {
@@ -20,29 +20,9 @@ describe('Environment Template Configuration', () => {
       expect(content).toMatch(/PORT=/);
     });
 
-    it('should contain DB_HOST variable', () => {
+    it('should contain DATABASE_URL variable', () => {
       const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/DB_HOST=/);
-    });
-
-    it('should contain DB_PORT variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/DB_PORT=/);
-    });
-
-    it('should contain DB_USERNAME variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/DB_USERNAME=/);
-    });
-
-    it('should contain DB_PASSWORD variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/DB_PASSWORD=/);
-    });
-
-    it('should contain DB_DATABASE variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/DB_DATABASE=/);
+      expect(content).toMatch(/DATABASE_URL=/);
     });
 
     it('should contain AWS_REGION variable', () => {
@@ -65,19 +45,9 @@ describe('Environment Template Configuration', () => {
       expect(content).toMatch(/AWS_S3_BUCKET=/);
     });
 
-    it('should contain REDIS_HOST variable', () => {
+    it('should contain REDIS_URL variable', () => {
       const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/REDIS_HOST=/);
-    });
-
-    it('should contain REDIS_PORT variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/REDIS_PORT=/);
-    });
-
-    it('should contain REDIS_PASSWORD variable', () => {
-      const content = fs.readFileSync(envExamplePath, 'utf-8');
-      expect(content).toMatch(/REDIS_PASSWORD=/);
+      expect(content).toMatch(/REDIS_URL=/);
     });
 
     it('should have Application section comment', () => {

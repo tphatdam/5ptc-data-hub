@@ -12,6 +12,8 @@ import {
 import { Exchange } from './exchange.entity';
 import { StockCandle } from './stock-candle.entity';
 import { StockSnapshot } from './stock-snapshot.entity';
+import { StockForeignTradingDaily } from './stock-foreign-trading-daily.entity';
+import { StockInsiderEvent } from './stock-insider-event.entity';
 
 @Entity('symbol')
 export class Symbol {
@@ -55,4 +57,13 @@ export class Symbol {
 
   @OneToMany(() => StockSnapshot, (snapshot) => snapshot.symbol)
   snapshots: StockSnapshot[];
+
+  @OneToMany(
+    () => StockForeignTradingDaily,
+    (foreignTradingDaily) => foreignTradingDaily.symbol,
+  )
+  foreignTradingDaily: StockForeignTradingDaily[];
+
+  @OneToMany(() => StockInsiderEvent, (insiderEvent) => insiderEvent.symbol)
+  insiderEvents: StockInsiderEvent[];
 }

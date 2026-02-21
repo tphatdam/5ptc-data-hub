@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { QueueModule } from '../queue/queue.module';
+import { SimplizeModule } from '../providers/simplize/simplize.module';
 
 import {
   DataSource,
@@ -15,6 +16,8 @@ import {
   GoldPrice,
   NewsArticle,
   JobRun,
+  StockForeignTradingDaily,
+  StockInsiderEvent,
 } from './entities';
 
 import {
@@ -31,6 +34,7 @@ import {
   ProviderRegistryService,
   ProviderFactoryService,
   DynamicProviderAdapter,
+  SimplizeProvider,
 } from './providers';
 
 import {
@@ -42,6 +46,8 @@ import {
   NewsJob,
   SymbolSyncJob,
   GapFillJob,
+  CompanyIntelJob,
+  CompanyIntelProcessor,
 } from './jobs';
 
 import { DataHubController } from './data-hub.controller';
@@ -57,6 +63,8 @@ const entities = [
   GoldPrice,
   NewsArticle,
   JobRun,
+  StockForeignTradingDaily,
+  StockInsiderEvent,
 ];
 
 const services = [
@@ -73,6 +81,7 @@ const providers = [
   ProviderRegistryService,
   ProviderFactoryService,
   DynamicProviderAdapter,
+  SimplizeProvider,
 ];
 
 const jobs = [
@@ -84,14 +93,17 @@ const jobs = [
   NewsJob,
   SymbolSyncJob,
   GapFillJob,
+  CompanyIntelJob,
+  CompanyIntelProcessor,
 ];
 
 @Module({
   imports: [
     ConfigModule,
-    ScheduleModule.forRoot(),
+    ScheduleModule,
     TypeOrmModule.forFeature(entities),
     QueueModule,
+    SimplizeModule,
   ],
   controllers: [DataHubController],
   providers: [...services, ...providers, ...jobs],

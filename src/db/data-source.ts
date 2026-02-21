@@ -1,5 +1,6 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
+import { getDatabaseSslOption } from '../config/database-url';
 
 // Load environment variables
 config();
@@ -9,33 +10,23 @@ config();
  * This file is used by TypeORM CLI commands for migration generation and execution
  */
 
-// Determine if we should use DATABASE_URL or discrete connection parameters
 const getDatabaseConfig = (): DataSourceOptions => {
-  const baseConfig: Partial<DataSourceOptions> = {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required for migrations');
+  }
+  const ssl = getDatabaseSslOption(databaseUrl);
+  return {
     type: 'postgres',
+    url: databaseUrl,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    migrations: [__dirname + '/migrations/*{.ts,.js}'],
-    // Disable synchronize for production - use migrations instead
+    migrations: [
+      __dirname + '/migrations/*{.ts,.js}',
+      __dirname + '/../modules/data-hub/migrations/*{.ts,.js}',
+    ],
     synchronize: process.env.NODE_ENV !== 'production',
     logging: process.env.NODE_ENV === 'development',
-  };
-
-  // Option 1: Use DATABASE_URL if provided
-  if (process.env.DATABASE_URL) {
-    return {
-      ...baseConfig,
-      url: process.env.DATABASE_URL,
-    } as DataSourceOptions;
-  }
-
-  // Option 2: Use discrete connection parameters
-  return {
-    ...baseConfig,
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'vnstock_hub',
+    ...(ssl !== undefined && { ssl }),
   } as DataSourceOptions;
 };
 

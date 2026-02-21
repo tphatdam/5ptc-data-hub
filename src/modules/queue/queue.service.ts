@@ -1,16 +1,19 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job, JobsOptions, Queue } from 'bullmq';
-import {
-  IngestionLogMeta,
-  logPayload,
-  toLogError,
-} from '../../common/logging/ingestion-log';
+import { IngestionLogMeta, logPayload, toLogError } from '../../common/logging/ingestion-log';
+import type {
+  CompanyIntelForeignJobPayload,
+  CompanyIntelInsiderJobPayload,
+} from '../data-hub/jobs/company-intel.types';
 import type {
   IntradayIndexJobPayload,
   IntradayStockJobPayload,
 } from '../data-hub/jobs/intraday-market.types';
 import {
+  COMPANY_INTEL_FOREIGN_JOB,
+  COMPANY_INTEL_INSIDER_JOB,
+  COMPANY_INTEL_QUEUE,
   EMAIL_JOB_SEND,
   EMAIL_JOB_SEND_TEMPLATE,
   EMAIL_QUEUE,
@@ -37,6 +40,8 @@ export class QueueService {
     @InjectQueue(SEED_QUEUE) private readonly seedQueue: Queue,
     @InjectQueue(MARKET_INTRADAY_QUEUE)
     private readonly marketIntradayQueue: Queue,
+    @InjectQueue(COMPANY_INTEL_QUEUE)
+    private readonly companyIntelQueue: Queue,
   ) {}
 
   async addGenerateStockReportJob(stock: string, email?: string): Promise<void> {
@@ -159,6 +164,70 @@ export class QueueService {
     );
   }
 
+  async addCompanyIntelForeignJob(
+    payload: CompanyIntelForeignJobPayload,
+    options?: JobsOptions,
+  ): Promise<QueueAddResult> {
+    const jobId =
+      options?.jobId || `${COMPANY_INTEL_FOREIGN_JOB}:${payload.cycleId}:${payload.ticker}`;
+    return this.addWithLogging(
+      this.companyIntelQueue,
+      COMPANY_INTEL_FOREIGN_JOB,
+      payload,
+      {
+        removeOnComplete: true,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1500,
+        },
+        ...options,
+        jobId,
+      },
+      {
+        module: 'queue',
+        jobName: COMPANY_INTEL_FOREIGN_JOB,
+        cycleId: payload.cycleId,
+        timeBucket: payload.timeBucket,
+        symbolId: payload.symbolId,
+        ticker: payload.ticker,
+      },
+      true,
+    );
+  }
+
+  async addCompanyIntelInsiderJob(
+    payload: CompanyIntelInsiderJobPayload,
+    options?: JobsOptions,
+  ): Promise<QueueAddResult> {
+    const jobId =
+      options?.jobId || `${COMPANY_INTEL_INSIDER_JOB}:${payload.cycleId}:${payload.ticker}`;
+    return this.addWithLogging(
+      this.companyIntelQueue,
+      COMPANY_INTEL_INSIDER_JOB,
+      payload,
+      {
+        removeOnComplete: true,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1500,
+        },
+        ...options,
+        jobId,
+      },
+      {
+        module: 'queue',
+        jobName: COMPANY_INTEL_INSIDER_JOB,
+        cycleId: payload.cycleId,
+        timeBucket: payload.timeBucket,
+        symbolId: payload.symbolId,
+        ticker: payload.ticker,
+      },
+      true,
+    );
+  }
+
   async addJob(
     queueName: string,
     jobName: string,
@@ -200,6 +269,8 @@ export class QueueService {
         return this.seedQueue;
       case MARKET_INTRADAY_QUEUE:
         return this.marketIntradayQueue;
+      case COMPANY_INTEL_QUEUE:
+        return this.companyIntelQueue;
       default:
         throw new Error(`Unsupported queue name: ${queueName}`);
     }
@@ -256,6 +327,24 @@ export class QueueService {
       );
       return { queueJobId: String(job.id), dedup: false };
     } catch (error: unknown) {
+      if (queueJobId && this.isDuplicateJobError(error)) {
+        const existingJob = await queue.getJob(queueJobId);
+        this.logger.warn(
+          logPayload({
+            ...context,
+            event: 'queue_dedup_hit',
+            queueName: queue.name,
+            queueJobId: existingJob ? String(existingJob.id) : queueJobId,
+            durationMs: Date.now() - startedAt,
+            status: 'dedup',
+          }),
+        );
+        return {
+          queueJobId: existingJob ? String(existingJob.id) : queueJobId,
+          dedup: true,
+        };
+      }
+
       this.logger.error(
         logPayload({
           ...context,
@@ -274,5 +363,10 @@ export class QueueService {
 
       return { queueJobId, dedup: false };
     }
+  }
+
+  private isDuplicateJobError(error: unknown): boolean {
+    const message = toLogError(error).toLowerCase();
+    return message.includes('already exists') || message.includes('jobid');
   }
 }

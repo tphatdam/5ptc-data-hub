@@ -43,6 +43,20 @@ export function mapLatestQuoteToIntraday(
     ts: now,
     price: price ?? 0,
     volume: normalizeBigintString(volumeRaw) ?? '0',
+    matchType:
+      normalizeString(pickFirstValue(quote, ['matchType', 'side', 'tradeType'])) ?? null,
+    tradeId:
+      normalizeString(pickFirstValue(quote, ['tradeId', 'id', 'eventId'])) ?? null,
+    priceChange:
+      pickFirstNumber(quote, ['priceChange', 'change', 'delta', 'priceDelta']) ?? null,
+    accumulatedVolume:
+      normalizeBigintString(
+        pickFirstValue(quote, ['accumulatedVolume', 'totalVolume', 'totalMatchVolume']),
+      ) ?? null,
+    accumulatedValue:
+      normalizeDecimalString(
+        pickFirstValue(quote, ['accumulatedValue', 'totalValue', 'totalMatchValue']),
+      ) ?? null,
     source: SOURCE,
   };
 }
@@ -53,11 +67,10 @@ export function mapPriceHistoryToDailyBars(
 ): BulkUpsertQuoteDailyDto[] {
   const list = Array.isArray(records) ? records : [];
 
-  return list
-    .map((r) => {
+  return list.flatMap((r) => {
       const date = parseDateOnly(pickFirstValue(r, ['date', 'tradingDate', 'day', 'd']));
       if (!date) {
-        return null;
+        return [];
       }
 
       const open = pickFirstNumber(r, ['open', 'o']);
@@ -65,8 +78,14 @@ export function mapPriceHistoryToDailyBars(
       const low = pickFirstNumber(r, ['low', 'l']);
       const close = pickFirstNumber(r, ['close', 'c']);
       const volume = normalizeBigintString(pickFirstValue(r, ['volume', 'v', 'vol'])) ?? '0';
+      const buyVolume = normalizeBigintString(
+        pickFirstValue(r, ['foreignBuyVolume', 'buyForeignVolume', 'fb']),
+      );
+      const sellVolume = normalizeBigintString(
+        pickFirstValue(r, ['foreignSellVolume', 'sellForeignVolume', 'fs']),
+      );
 
-      return {
+      const row: BulkUpsertQuoteDailyDto = {
         symbolId,
         date,
         open: open ?? 0,
@@ -74,10 +93,29 @@ export function mapPriceHistoryToDailyBars(
         low: low ?? 0,
         close: close ?? 0,
         volume,
+        value:
+          normalizeDecimalString(
+            pickFirstValue(r, ['value', 'totalValue', 'tradingValue', 'tv']),
+          ) ?? null,
+        putThroughVolume:
+          normalizeBigintString(
+            pickFirstValue(r, ['putThroughVolume', 'putthroughVolume', 'ptq']),
+          ) ?? null,
+        putThroughValue:
+          normalizeDecimalString(
+            pickFirstValue(r, ['putThroughValue', 'putthroughValue', 'ptv']),
+          ) ?? null,
+        foreignBuyVolume: buyVolume,
+        foreignSellVolume: sellVolume,
+        foreignNetVolume:
+          normalizeBigintString(pickFirstValue(r, ['foreignNetVolume', 'fnet'])) ??
+          computeNetBigintString(buyVolume, sellVolume),
+        totalTrades:
+          normalizeBigintString(pickFirstValue(r, ['totalTrades', 'trades', 'tt'])) ?? null,
         source: SOURCE,
       };
-    })
-    .filter((x): x is BulkUpsertQuoteDailyDto => Boolean(x));
+      return [row];
+    });
 }
 
 export function mapForeignTradingToRows(
@@ -86,11 +124,10 @@ export function mapForeignTradingToRows(
 ): BulkUpsertForeignTradingDailyDto[] {
   const list = extractList(data);
 
-  return list
-    .map((r) => {
+  return list.flatMap((r) => {
       const date = parseDateOnly(pickFirstValue(r, ['date', 'tradingDate', 'day']));
       if (!date) {
-        return null;
+        return [];
       }
 
       const buyVolume = normalizeBigintString(
@@ -104,16 +141,28 @@ export function mapForeignTradingToRows(
           pickFirstValue(r, ['netVolume', 'net', 'netVol', 'foreignNetVolume']),
         ) ?? computeNetBigintString(buyVolume, sellVolume);
 
-      return {
+      const row: BulkUpsertForeignTradingDailyDto = {
         symbolId,
         date,
         buyVolume,
         sellVolume,
         netVolume,
+        buyValue:
+          normalizeDecimalString(
+            pickFirstValue(r, ['buyValue', 'buyTradingValue', 'foreignBuyValue']),
+          ) ?? null,
+        sellValue:
+          normalizeDecimalString(
+            pickFirstValue(r, ['sellValue', 'sellTradingValue', 'foreignSellValue']),
+          ) ?? null,
+        netValue:
+          normalizeDecimalString(
+            pickFirstValue(r, ['netValue', 'netTradingValue', 'foreignNetValue']),
+          ) ?? null,
         source: SOURCE,
       };
-    })
-    .filter((x): x is BulkUpsertForeignTradingDailyDto => Boolean(x));
+      return [row];
+    });
 }
 
 export function mapInsiderTimelineToRows(
@@ -122,27 +171,38 @@ export function mapInsiderTimelineToRows(
 ): BulkUpsertInsiderTradingEventDto[] {
   const list = extractList(listPayload);
 
-  return list
-    .map((r) => {
+  return list.flatMap((r) => {
       const transactionDate = parseDateOnly(
         pickFirstValue(r, ['transactionDate', 'date', 'tradingDate']),
       );
       if (!transactionDate) {
-        return null;
+        return [];
       }
 
-      return {
+      const row: BulkUpsertInsiderTradingEventDto = {
         symbolId,
         transactionDate,
+        announceDate:
+          parseDateOnly(pickFirstValue(r, ['announceDate', 'publicDate', 'issueDate'])) ?? null,
         insiderName: normalizeString(pickFirstValue(r, ['insiderName', 'name'])) ?? null,
         insiderRole: normalizeString(pickFirstValue(r, ['insiderRole', 'role'])) ?? null,
         transactionType: normalizeString(pickFirstValue(r, ['transactionType', 'type'])) ?? null,
+        dealMethod:
+          normalizeString(pickFirstValue(r, ['dealMethod', 'method', 'transactionMethod'])) ??
+          null,
+        actionType:
+          normalizeString(pickFirstValue(r, ['actionType', 'action', 'transactionAction'])) ??
+          null,
         quantity: normalizeBigintString(pickFirstValue(r, ['quantity', 'qty', 'volume'])) ?? null,
         price: pickFirstNumber(r, ['price', 'transactionPrice']) ?? null,
+        ownershipRatio:
+          normalizeDecimalString(
+            pickFirstValue(r, ['ownershipRatio', 'ownership', 'holdingRatio']),
+          ) ?? null,
         source: SOURCE,
       };
-    })
-    .filter((x): x is BulkUpsertInsiderTradingEventDto => Boolean(x));
+      return [row];
+    });
 }
 
 export function mapRelatedToPeers(
@@ -203,11 +263,10 @@ export function mapNewsEventsToArticles(
   const list = extractList(payload);
   const normalizedTicker = normalizeTicker(ticker);
 
-  return list
-    .map((r) => {
+  return list.flatMap((r) => {
       const url = normalizeString(pickFirstValue(r, ['url', 'link', 'href'])) ?? null;
       if (!url) {
-        return null;
+        return [];
       }
 
       const publishedAt = parseTimestamp(
@@ -221,20 +280,35 @@ export function mapNewsEventsToArticles(
 
       const tags = dedupeStrings(extractStringArray(pickFirstValue(r, ['tags', 'tag'])));
 
-      return {
+      const row: BulkUpsertNewsArticleDto = {
         url,
         urlHash: sha256Hex(url),
         publishedAt,
         title: normalizeString(pickFirstValue(r, ['title', 'name'])) ?? url,
         summary: normalizeString(pickFirstValue(r, ['summary', 'description'])) ?? null,
+        subtitle:
+          normalizeString(pickFirstValue(r, ['subtitle', 'subTitle', 'newsSubTitle'])) ?? null,
         content: normalizeString(pickFirstValue(r, ['content', 'body', 'text'])) ?? null,
         tickers: tickers.length > 0 ? tickers : null,
         tags: tags.length > 0 ? tags : null,
         source: SOURCE,
+        providerNewsId:
+          normalizeString(pickFirstValue(r, ['newsId', 'providerNewsId', 'id'])) ?? null,
+        languageCode:
+          normalizeString(pickFirstValue(r, ['languageCode', 'langCode', 'lang'])) ?? null,
+        sourceLink:
+          normalizeString(pickFirstValue(r, ['sourceLink', 'newsSourceLink', 'originalLink'])) ??
+          null,
+        imageUrl:
+          normalizeString(pickFirstValue(r, ['imageUrl', 'newsImageUrl', 'thumbnail'])) ?? null,
+        sourceCreatedAt:
+          parseTimestamp(pickFirstValue(r, ['sourceCreatedAt', 'createdAt'])) ?? null,
+        sourceUpdatedAt:
+          parseTimestamp(pickFirstValue(r, ['sourceUpdatedAt', 'updatedAt'])) ?? null,
         fetchedAt: now,
       };
-    })
-    .filter((x): x is BulkUpsertNewsArticleDto => Boolean(x));
+      return [row];
+    });
 }
 
 export function mapReportsToRows(
@@ -328,6 +402,24 @@ function normalizeBigintString(v: any): string | null {
   return s;
 }
 
+function normalizeDecimalString(v: any): string | null {
+  if (v === undefined || v === null || v === '') {
+    return null;
+  }
+
+  const s = String(v).replace(/,/g, '').trim();
+  if (s.length === 0) {
+    return null;
+  }
+
+  const asNumber = Number(s);
+  if (!Number.isFinite(asNumber)) {
+    return null;
+  }
+
+  return String(asNumber);
+}
+
 function computeNetBigintString(buy: string | null, sell: string | null): string | null {
   if (!buy || !sell) {
     return null;
@@ -416,4 +508,3 @@ function extractStringArray(v: any): string[] {
 function dedupeStrings(list: string[]): string[] {
   return Array.from(new Set(list));
 }
-

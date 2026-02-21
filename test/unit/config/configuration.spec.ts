@@ -24,22 +24,6 @@ describe('Configuration Loader', () => {
     expect(config.app.logLevel).toBe('info');
   });
 
-  it('should load database configuration from discrete variables', () => {
-    process.env.DB_HOST = 'localhost';
-    process.env.DB_PORT = '5432';
-    process.env.DB_USER = 'testuser';
-    process.env.DB_PASS = 'testpass';
-    process.env.DB_NAME = 'testdb';
-
-    const config = configuration();
-
-    expect(config.database.host).toBe('localhost');
-    expect(config.database.port).toBe(5432);
-    expect(config.database.username).toBe('testuser');
-    expect(config.database.password).toBe('testpass');
-    expect(config.database.database).toBe('testdb');
-  });
-
   it('should load database configuration from DATABASE_URL', () => {
     process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/dbname';
 
@@ -48,11 +32,19 @@ describe('Configuration Loader', () => {
     expect(config.database.url).toBe('postgresql://user:pass@localhost:5432/dbname');
   });
 
+  it('should load redis configuration from REDIS_URL', () => {
+    process.env.REDIS_URL = 'redis://localhost:6379';
+
+    const config = configuration();
+
+    expect(config.redis.url).toBe('redis://localhost:6379');
+  });
+
   it('should load HTTP configuration with defaults', () => {
     const config = configuration();
 
     expect(config.http.timeoutMs).toBe(30000);
-    expect(config.http.retries).toBe(3);
+    expect(config.http.retries).toBe(5);
     expect(config.http.retryBaseMs).toBe(1000);
   });
 

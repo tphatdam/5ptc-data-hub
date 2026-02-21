@@ -42,6 +42,27 @@ export class QuoteDaily {
   @Column({ type: 'varchar', length: 50 })
   volume: string; // bigint as string
 
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  value: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  putThroughVolume: string | null;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  putThroughValue: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  foreignBuyVolume: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  foreignSellVolume: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  foreignNetVolume: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  totalTrades: string | null;
+
   @Column({ type: 'varchar', length: 50 })
   source: string;
 

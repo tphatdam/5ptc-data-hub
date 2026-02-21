@@ -28,6 +28,12 @@ export class UpsertService {
       close: string;
       volume: string;
       value?: string;
+      foreignBuyVolume?: string;
+      foreignSellVolume?: string;
+      foreignNetVolume?: string;
+      putThroughVolume?: string;
+      putThroughValue?: string;
+      totalTrades?: string;
       sourceId: number;
     }>
   ): Promise<UpsertResult> {
@@ -35,7 +41,20 @@ export class UpsertService {
       'stock_candle',
       candles,
       ['symbol_id', 'interval', 'ts'],
-      ['open', 'high', 'low', 'close', 'volume', 'value'],
+      [
+        'open',
+        'high',
+        'low',
+        'close',
+        'volume',
+        'value',
+        'foreign_buy_volume',
+        'foreign_sell_volume',
+        'foreign_net_volume',
+        'put_through_volume',
+        'put_through_value',
+        'total_trades',
+      ],
       (c) => ({
         symbol_id: c.symbolId,
         interval: c.interval,
@@ -46,6 +65,12 @@ export class UpsertService {
         close: c.close,
         volume: c.volume,
         value: c.value,
+        foreign_buy_volume: c.foreignBuyVolume,
+        foreign_sell_volume: c.foreignSellVolume,
+        foreign_net_volume: c.foreignNetVolume,
+        put_through_volume: c.putThroughVolume,
+        put_through_value: c.putThroughValue,
+        total_trades: c.totalTrades,
         source_id: c.sourceId,
       })
     );
@@ -88,10 +113,20 @@ export class UpsertService {
       symbolId: number;
       asOf: Date;
       pe?: string;
+      pb?: string;
+      ps?: string;
+      roe?: string;
+      roa?: string;
+      ev?: string;
       eps?: string;
       marketCap?: string;
       freeFloat?: string;
       sharesOut?: string;
+      foreignRoom?: string;
+      foreignHoldingRoom?: string;
+      currentHoldingRatio?: string;
+      maxHoldingRatio?: string;
+      avgMatchVolume2w?: string;
       sourceId: number;
     }>
   ): Promise<UpsertResult> {
@@ -99,15 +134,41 @@ export class UpsertService {
       'stock_snapshot',
       snapshots,
       ['symbol_id', 'as_of'],
-      ['pe', 'eps', 'market_cap', 'free_float', 'shares_out'],
+      [
+        'pe',
+        'pb',
+        'ps',
+        'roe',
+        'roa',
+        'ev',
+        'eps',
+        'market_cap',
+        'free_float',
+        'shares_out',
+        'foreign_room',
+        'foreign_holding_room',
+        'current_holding_ratio',
+        'max_holding_ratio',
+        'avg_match_volume_2w',
+      ],
       (s) => ({
         symbol_id: s.symbolId,
         as_of: s.asOf,
         pe: s.pe,
+        pb: s.pb,
+        ps: s.ps,
+        roe: s.roe,
+        roa: s.roa,
+        ev: s.ev,
         eps: s.eps,
         market_cap: s.marketCap,
         free_float: s.freeFloat,
         shares_out: s.sharesOut,
+        foreign_room: s.foreignRoom,
+        foreign_holding_room: s.foreignHoldingRoom,
+        current_holding_ratio: s.currentHoldingRatio,
+        max_holding_ratio: s.maxHoldingRatio,
+        avg_match_volume_2w: s.avgMatchVolume2w,
         source_id: s.sourceId,
       })
     );
@@ -151,9 +212,16 @@ export class UpsertService {
       publishedAt?: Date;
       title: string;
       summary?: string;
+      subtitle?: string;
       content?: string;
       tickers?: string[];
       tags?: string[];
+      providerNewsId?: string;
+      langCode?: string;
+      sourceLink?: string;
+      newsImageUrl?: string;
+      sourceCreatedAt?: Date;
+      sourceUpdatedAt?: Date;
       fetchedAt: Date;
     }>
   ): Promise<UpsertResult> {
@@ -166,7 +234,22 @@ export class UpsertService {
       'news_article',
       withHash,
       ['source_id', 'url_hash'],
-      ['published_at', 'title', 'summary', 'content', 'tickers', 'tags', 'fetched_at'],
+      [
+        'published_at',
+        'title',
+        'summary',
+        'subtitle',
+        'content',
+        'tickers',
+        'tags',
+        'provider_news_id',
+        'lang_code',
+        'source_link',
+        'news_image_url',
+        'source_created_at',
+        'source_updated_at',
+        'fetched_at',
+      ],
       (a) => ({
         source_id: a.sourceId,
         url: a.url,
@@ -174,11 +257,157 @@ export class UpsertService {
         published_at: a.publishedAt,
         title: a.title,
         summary: a.summary,
+        subtitle: a.subtitle,
         content: a.content,
         tickers: a.tickers ? `{${a.tickers.join(',')}}` : null,
         tags: a.tags ? `{${a.tags.join(',')}}` : null,
+        provider_news_id: a.providerNewsId,
+        lang_code: a.langCode,
+        source_link: a.sourceLink,
+        news_image_url: a.newsImageUrl,
+        source_created_at: a.sourceCreatedAt,
+        source_updated_at: a.sourceUpdatedAt,
         fetched_at: a.fetchedAt,
       })
+    );
+  }
+
+  async upsertStockForeignTradingDaily(
+    rows: Array<{
+      symbolId: number;
+      tradeDate: Date;
+      buyVolume?: string;
+      sellVolume?: string;
+      netVolume?: string;
+      buyValue?: string;
+      sellValue?: string;
+      netValue?: string;
+      foreignRoom?: string;
+      foreignHoldingRoom?: string;
+      currentHoldingRatio?: string;
+      maxHoldingRatio?: string;
+      rawPayload?: Record<string, unknown> | null;
+      sourceId: number;
+    }>,
+  ): Promise<UpsertResult> {
+    return this.batchUpsert(
+      'stock_foreign_trading_daily',
+      rows,
+      ['symbol_id', 'trade_date', 'source_id'],
+      [
+        'buy_volume',
+        'sell_volume',
+        'net_volume',
+        'buy_value',
+        'sell_value',
+        'net_value',
+        'foreign_room',
+        'foreign_holding_room',
+        'current_holding_ratio',
+        'max_holding_ratio',
+        'raw_payload',
+      ],
+      (row) => ({
+        symbol_id: row.symbolId,
+        trade_date: row.tradeDate,
+        buy_volume: row.buyVolume,
+        sell_volume: row.sellVolume,
+        net_volume: row.netVolume,
+        buy_value: row.buyValue,
+        sell_value: row.sellValue,
+        net_value: row.netValue,
+        foreign_room: row.foreignRoom,
+        foreign_holding_room: row.foreignHoldingRoom,
+        current_holding_ratio: row.currentHoldingRatio,
+        max_holding_ratio: row.maxHoldingRatio,
+        raw_payload: row.rawPayload ? JSON.stringify(row.rawPayload) : null,
+        source_id: row.sourceId,
+      }),
+    );
+  }
+
+  async upsertStockInsiderEvents(
+    rows: Array<{
+      symbolId: number;
+      announceDate?: Date;
+      transactionDate: Date;
+      insiderName?: string;
+      insiderRole?: string;
+      relatedPerson?: string;
+      actionType?: string;
+      dealMethod?: string;
+      status?: string;
+      quantityRegistered?: string;
+      quantityExecuted?: string;
+      quantityRemaining?: string;
+      priceFrom?: string;
+      priceTo?: string;
+      avgPrice?: string;
+      dealValue?: string;
+      ownershipBefore?: string;
+      ownershipAfter?: string;
+      ownershipChange?: string;
+      sourceEventId?: string;
+      sourceUrl?: string;
+      rawPayload?: Record<string, unknown> | null;
+      sourceId: number;
+    }>,
+  ): Promise<UpsertResult> {
+    return this.batchUpsert(
+      'stock_insider_event',
+      rows,
+      [
+        'symbol_id',
+        'transaction_date',
+        'insider_name',
+        'action_type',
+        'quantity_executed',
+        'source_id',
+      ],
+      [
+        'announce_date',
+        'insider_role',
+        'related_person',
+        'deal_method',
+        'status',
+        'quantity_registered',
+        'quantity_remaining',
+        'price_from',
+        'price_to',
+        'avg_price',
+        'deal_value',
+        'ownership_before',
+        'ownership_after',
+        'ownership_change',
+        'source_event_id',
+        'source_url',
+        'raw_payload',
+      ],
+      (row) => ({
+        symbol_id: row.symbolId,
+        announce_date: row.announceDate,
+        transaction_date: row.transactionDate,
+        insider_name: row.insiderName,
+        insider_role: row.insiderRole,
+        related_person: row.relatedPerson,
+        action_type: row.actionType,
+        deal_method: row.dealMethod,
+        status: row.status,
+        quantity_registered: row.quantityRegistered,
+        quantity_executed: row.quantityExecuted,
+        quantity_remaining: row.quantityRemaining,
+        price_from: row.priceFrom,
+        price_to: row.priceTo,
+        avg_price: row.avgPrice,
+        deal_value: row.dealValue,
+        ownership_before: row.ownershipBefore,
+        ownership_after: row.ownershipAfter,
+        ownership_change: row.ownershipChange,
+        source_event_id: row.sourceEventId,
+        source_url: row.sourceUrl,
+        raw_payload: row.rawPayload ? JSON.stringify(row.rawPayload) : null,
+        source_id: row.sourceId,
+      }),
     );
   }
 

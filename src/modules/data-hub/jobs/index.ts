@@ -8,3 +8,6 @@ export * from './gold.job';
 export * from './news.job';
 export * from './symbol-sync.job';
 export * from './gap-fill.job';
+export * from './company-intel.job';
+export * from './company-intel.processor';
+export * from './company-intel.types';

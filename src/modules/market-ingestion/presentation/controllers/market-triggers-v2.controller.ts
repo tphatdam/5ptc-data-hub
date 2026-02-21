@@ -2,6 +2,7 @@ import { Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { RunQuoteHourlyUseCase } from '../../application/use-cases/run-quote-hourly.use-case';
 import { RunDailyCompanyUseCase } from '../../application/use-cases/run-daily-company.use-case';
+import { RunDailyEodUseCase } from '../../application/use-cases/run-daily-eod.use-case';
 
 @ApiTags('Market Triggers V2')
 @Controller('v2/triggers/market')
@@ -9,6 +10,7 @@ export class MarketTriggersV2Controller {
   constructor(
     private readonly runQuoteHourlyUseCase: RunQuoteHourlyUseCase,
     private readonly runDailyCompanyUseCase: RunDailyCompanyUseCase,
+    private readonly runDailyEodUseCase: RunDailyEodUseCase,
   ) {}
 
   @Post('quote-hourly')
@@ -22,6 +24,13 @@ export class MarketTriggersV2Controller {
   async triggerDailyCompany() {
     return this.run('daily-company', async () => {
       await this.runDailyCompanyUseCase.execute();
+    });
+  }
+
+  @Post('daily-eod')
+  async triggerDailyEod() {
+    return this.run('daily-eod', async () => {
+      await this.runDailyEodUseCase.execute();
     });
   }
 

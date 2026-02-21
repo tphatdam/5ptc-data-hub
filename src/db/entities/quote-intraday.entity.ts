@@ -33,6 +33,21 @@ export class QuoteIntraday {
   @Column({ type: 'varchar', length: 50 })
   volume: string; // bigint as string
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  matchType: string | null;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  tradeId: string | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  priceChange: number | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  accumulatedVolume: string | null;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  accumulatedValue: string | null;
+
   @Column({ type: 'varchar', length: 50 })
   source: string;
 

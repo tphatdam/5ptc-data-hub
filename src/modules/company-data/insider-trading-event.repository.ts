@@ -5,11 +5,15 @@ import { DataSource } from 'typeorm';
 export interface BulkUpsertInsiderTradingEventDto {
   symbolId: string;
   transactionDate: Date;
+  announceDate?: Date | null;
   insiderName: string | null;
   insiderRole: string | null;
   transactionType: string | null;
+  dealMethod?: string | null;
+  actionType?: string | null;
   quantity: string | null;
   price: number | null;
+  ownershipRatio?: string | null;
   source: string;
 }
 
@@ -57,18 +61,22 @@ export class InsiderTradingEventRepository {
     const valuePlaceholders: string[] = [];
 
     chunk.forEach((row, index) => {
-      const baseIndex = index * 8;
+      const baseIndex = index * 12;
       valuePlaceholders.push(
-        `($${baseIndex + 1}::uuid, $${baseIndex + 2}::date, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}::bigint, $${baseIndex + 7}::double precision, $${baseIndex + 8})`,
+        `($${baseIndex + 1}::uuid, $${baseIndex + 2}::date, $${baseIndex + 3}::date, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}::bigint, $${baseIndex + 10}::double precision, $${baseIndex + 11}::numeric, $${baseIndex + 12})`,
       );
       values.push(
         row.symbolId,
         row.transactionDate,
+        row.announceDate ?? null,
         row.insiderName,
         row.insiderRole,
         row.transactionType,
+        row.dealMethod ?? null,
+        row.actionType ?? null,
         row.quantity,
         row.price,
+        row.ownershipRatio ?? null,
         row.source,
       );
     });
@@ -77,17 +85,25 @@ export class InsiderTradingEventRepository {
       INSERT INTO insider_trading_events (
         "symbolId",
         "transactionDate",
+        "announceDate",
         "insiderName",
         "insiderRole",
         "transactionType",
+        "dealMethod",
+        "actionType",
         quantity,
         price,
+        "ownershipRatio",
         source
       )
       VALUES ${valuePlaceholders.join(', ')}
       ON CONFLICT ("symbolId", "transactionDate", "insiderName", "transactionType", quantity, price, source)
       DO UPDATE SET
+        "announceDate" = COALESCE(EXCLUDED."announceDate", insider_trading_events."announceDate"),
         "insiderRole" = EXCLUDED."insiderRole",
+        "dealMethod" = COALESCE(EXCLUDED."dealMethod", insider_trading_events."dealMethod"),
+        "actionType" = COALESCE(EXCLUDED."actionType", insider_trading_events."actionType"),
+        "ownershipRatio" = COALESCE(EXCLUDED."ownershipRatio", insider_trading_events."ownershipRatio"),
         "ingestedAt" = CURRENT_TIMESTAMP
     `;
 
@@ -95,4 +111,3 @@ export class InsiderTradingEventRepository {
     return chunk.length;
   }
 }
-

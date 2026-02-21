@@ -8,10 +8,17 @@ export interface BulkUpsertNewsArticleDto {
   publishedAt: Date | null;
   title: string;
   summary: string | null;
+  subtitle?: string | null;
   content: string | null;
   tickers: string[] | null;
   tags: string[] | null;
   source: string;
+  providerNewsId?: string | null;
+  languageCode?: string | null;
+  sourceLink?: string | null;
+  imageUrl?: string | null;
+  sourceCreatedAt?: Date | null;
+  sourceUpdatedAt?: Date | null;
   fetchedAt: Date;
 }
 
@@ -56,9 +63,9 @@ export class NewsArticleRepository {
     const valuePlaceholders: string[] = [];
 
     chunk.forEach((row, index) => {
-      const baseIndex = index * 10;
+      const baseIndex = index * 17;
       valuePlaceholders.push(
-        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}::timestamptz, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}::text[], $${baseIndex + 8}::text[], $${baseIndex + 9}, $${baseIndex + 10}::timestamptz)`,
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}::timestamptz, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}::text[], $${baseIndex + 9}::text[], $${baseIndex + 10}, $${baseIndex + 11}, $${baseIndex + 12}, $${baseIndex + 13}, $${baseIndex + 14}, $${baseIndex + 15}::timestamptz, $${baseIndex + 16}::timestamptz, $${baseIndex + 17}::timestamptz)`,
       );
       values.push(
         row.url,
@@ -66,10 +73,17 @@ export class NewsArticleRepository {
         row.publishedAt,
         row.title,
         row.summary,
+        row.subtitle ?? null,
         row.content,
         row.tickers,
         row.tags,
         row.source,
+        row.providerNewsId ?? null,
+        row.languageCode ?? null,
+        row.sourceLink ?? null,
+        row.imageUrl ?? null,
+        row.sourceCreatedAt ?? null,
+        row.sourceUpdatedAt ?? null,
         row.fetchedAt,
       );
     });
@@ -81,10 +95,17 @@ export class NewsArticleRepository {
         "publishedAt",
         title,
         summary,
+        subtitle,
         content,
         tickers,
         tags,
         source,
+        "providerNewsId",
+        "languageCode",
+        "sourceLink",
+        "imageUrl",
+        "sourceCreatedAt",
+        "sourceUpdatedAt",
         "fetchedAt"
       )
       VALUES ${valuePlaceholders.join(', ')}
@@ -94,9 +115,16 @@ export class NewsArticleRepository {
         "publishedAt" = EXCLUDED."publishedAt",
         title = EXCLUDED.title,
         summary = EXCLUDED.summary,
+        subtitle = COALESCE(EXCLUDED.subtitle, news_articles.subtitle),
         content = EXCLUDED.content,
         tickers = EXCLUDED.tickers,
         tags = EXCLUDED.tags,
+        "providerNewsId" = COALESCE(EXCLUDED."providerNewsId", news_articles."providerNewsId"),
+        "languageCode" = COALESCE(EXCLUDED."languageCode", news_articles."languageCode"),
+        "sourceLink" = COALESCE(EXCLUDED."sourceLink", news_articles."sourceLink"),
+        "imageUrl" = COALESCE(EXCLUDED."imageUrl", news_articles."imageUrl"),
+        "sourceCreatedAt" = COALESCE(EXCLUDED."sourceCreatedAt", news_articles."sourceCreatedAt"),
+        "sourceUpdatedAt" = COALESCE(EXCLUDED."sourceUpdatedAt", news_articles."sourceUpdatedAt"),
         "fetchedAt" = EXCLUDED."fetchedAt",
         "ingestedAt" = CURRENT_TIMESTAMP
     `;
@@ -105,4 +133,3 @@ export class NewsArticleRepository {
     return chunk.length;
   }
 }
-

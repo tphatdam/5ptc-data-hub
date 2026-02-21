@@ -7,6 +7,7 @@ import { logPayload, toLogError } from '../../common/logging/ingestion-log';
 import { BrevoModule } from '../brevo/brevo.module';
 import { EmailProcessor } from './email.processor';
 import {
+  COMPANY_INTEL_QUEUE,
   EMAIL_QUEUE,
   MARKET_INTRADAY_QUEUE,
   REPORT_QUEUE,
@@ -20,25 +21,17 @@ type QueueClientWithEvents = {
 };
 
 function getQueueConnection(configService: ConfigService): RedisOptions {
-  const redisUrl = configService.get<string>('REDIS_URL');
-  if (redisUrl) {
-    const url = new URL(redisUrl);
-    return {
-      host: url.hostname,
-      port: Number(url.port) || 6379,
-      password: url.password || undefined,
-      username: url.username || undefined,
-      tls: url.protocol === 'rediss:' ? {} : undefined,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-      enableOfflineQueue: true,
-    };
+  const redisUrl = configService.get<string>('redis.url');
+  if (!redisUrl) {
+    throw new Error('REDIS_URL is required');
   }
-
+  const url = new URL(redisUrl);
   return {
-    host: configService.get<string>('REDIS_HOST', 'localhost'),
-    port: configService.get<number>('REDIS_PORT', 6379),
-    password: configService.get<string>('REDIS_PASSWORD') || undefined,
+    host: url.hostname,
+    port: Number(url.port) || 6379,
+    password: url.password || undefined,
+    username: url.username || undefined,
+    tls: url.protocol === 'rediss:' ? {} : undefined,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     enableOfflineQueue: true,
@@ -55,6 +48,7 @@ class QueueConnectionLogger implements OnModuleInit {
     @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
     @InjectQueue(SEED_QUEUE) private readonly seedQueue: Queue,
     @InjectQueue(MARKET_INTRADAY_QUEUE) private readonly marketIntradayQueue: Queue,
+    @InjectQueue(COMPANY_INTEL_QUEUE) private readonly companyIntelQueue: Queue,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -63,6 +57,7 @@ class QueueConnectionLogger implements OnModuleInit {
       this.observeQueueConnection(this.emailQueue),
       this.observeQueueConnection(this.seedQueue),
       this.observeQueueConnection(this.marketIntradayQueue),
+      this.observeQueueConnection(this.companyIntelQueue),
     ]);
   }
 
@@ -153,6 +148,7 @@ class QueueConnectionLogger implements OnModuleInit {
       { name: EMAIL_QUEUE },
       { name: SEED_QUEUE },
       { name: MARKET_INTRADAY_QUEUE },
+      { name: COMPANY_INTEL_QUEUE },
     ),
     BrevoModule,
   ],

@@ -35,6 +35,9 @@ export class InsiderTradingEvent {
   @Column({ type: 'date' })
   transactionDate: Date;
 
+  @Column({ type: 'date', nullable: true })
+  announceDate: Date | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   insiderName: string | null;
 
@@ -44,11 +47,20 @@ export class InsiderTradingEvent {
   @Column({ type: 'varchar', length: 50, nullable: true })
   transactionType: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  dealMethod: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  actionType: string | null;
+
   @Column({ type: 'bigint', nullable: true })
   quantity: string | null;
 
   @Column({ type: 'double precision', nullable: true })
   price: number | null;
+
+  @Column({ type: 'numeric', precision: 10, scale: 4, nullable: true })
+  ownershipRatio: string | null;
 
   @Column({ type: 'varchar', length: 50 })
   source: string;
@@ -56,4 +68,3 @@ export class InsiderTradingEvent {
   @CreateDateColumn()
   ingestedAt: Date;
 }
-

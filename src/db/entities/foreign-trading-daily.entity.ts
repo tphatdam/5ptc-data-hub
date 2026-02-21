@@ -36,10 +36,18 @@ export class ForeignTradingDaily {
   @Column({ type: 'bigint', nullable: true })
   netVolume: string | null;
 
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  buyValue: string | null;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  sellValue: string | null;
+
+  @Column({ type: 'numeric', precision: 22, scale: 4, nullable: true })
+  netValue: string | null;
+
   @Column({ type: 'varchar', length: 50 })
   source: string;
 
   @CreateDateColumn()
   ingestedAt: Date;
 }
-

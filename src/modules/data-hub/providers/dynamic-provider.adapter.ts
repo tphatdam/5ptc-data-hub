@@ -5,6 +5,7 @@ import {
   MarketDataProvider,
   NewsProvider,
   SymbolListProvider,
+  CompanyIntelProvider,
   AnyDataProvider,
 } from './interfaces';
 import {
@@ -130,6 +131,26 @@ export class DynamicProviderAdapter {
       options.preferredCodes,
     );
     return this.invokeWithFallback('symbol-list', providers, methodName, args, options);
+  }
+
+  async invokeCompanyIntel<K extends AsyncMethodKeys<CompanyIntelProvider>>(
+    methodName: K,
+    args: AsyncMethodArgs<CompanyIntelProvider, K>,
+    preferredCodesOrOptions?: ProviderInvokeInput,
+  ): Promise<
+    ProviderInvocationResult<AsyncMethodReturn<CompanyIntelProvider, K>>
+  > {
+    const options = this.resolveOptions(preferredCodesOrOptions);
+    const providers = await this.providerFactory.getCompanyIntelProviderEntries(
+      options.preferredCodes,
+    );
+    return this.invokeWithFallback(
+      'company-intel',
+      providers,
+      methodName,
+      args,
+      options,
+    );
   }
 
   private resolveOptions(input: ProviderInvokeInput): ProviderInvokeOptions {

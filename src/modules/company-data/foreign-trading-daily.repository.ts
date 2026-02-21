@@ -8,6 +8,9 @@ export interface BulkUpsertForeignTradingDailyDto {
   buyVolume: string | null;
   sellVolume: string | null;
   netVolume: string | null;
+  buyValue?: string | null;
+  sellValue?: string | null;
+  netValue?: string | null;
   source: string;
 }
 
@@ -53,9 +56,9 @@ export class ForeignTradingDailyRepository {
     const valuePlaceholders: string[] = [];
 
     chunk.forEach((row, index) => {
-      const baseIndex = index * 6;
+      const baseIndex = index * 9;
       valuePlaceholders.push(
-        `($${baseIndex + 1}::uuid, $${baseIndex + 2}::date, $${baseIndex + 3}::bigint, $${baseIndex + 4}::bigint, $${baseIndex + 5}::bigint, $${baseIndex + 6})`,
+        `($${baseIndex + 1}::uuid, $${baseIndex + 2}::date, $${baseIndex + 3}::bigint, $${baseIndex + 4}::bigint, $${baseIndex + 5}::bigint, $${baseIndex + 6}::numeric, $${baseIndex + 7}::numeric, $${baseIndex + 8}::numeric, $${baseIndex + 9})`,
       );
       values.push(
         row.symbolId,
@@ -63,6 +66,9 @@ export class ForeignTradingDailyRepository {
         row.buyVolume,
         row.sellVolume,
         row.netVolume,
+        row.buyValue ?? null,
+        row.sellValue ?? null,
+        row.netValue ?? null,
         row.source,
       );
     });
@@ -74,6 +80,9 @@ export class ForeignTradingDailyRepository {
         "buyVolume",
         "sellVolume",
         "netVolume",
+        "buyValue",
+        "sellValue",
+        "netValue",
         source
       )
       VALUES ${valuePlaceholders.join(', ')}
@@ -82,6 +91,9 @@ export class ForeignTradingDailyRepository {
         "buyVolume" = EXCLUDED."buyVolume",
         "sellVolume" = EXCLUDED."sellVolume",
         "netVolume" = EXCLUDED."netVolume",
+        "buyValue" = COALESCE(EXCLUDED."buyValue", foreign_trading_daily."buyValue"),
+        "sellValue" = COALESCE(EXCLUDED."sellValue", foreign_trading_daily."sellValue"),
+        "netValue" = COALESCE(EXCLUDED."netValue", foreign_trading_daily."netValue"),
         "ingestedAt" = CURRENT_TIMESTAMP
     `;
 
@@ -89,4 +101,3 @@ export class ForeignTradingDailyRepository {
     return chunk.length;
   }
 }
-

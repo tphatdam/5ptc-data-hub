@@ -8,6 +8,11 @@ export interface BulkUpsertQuoteIntradayDto {
   ts: Date;
   price: number;
   volume: string;
+  matchType?: string | null;
+  tradeId?: string | null;
+  priceChange?: number | null;
+  accumulatedVolume?: string | null;
+  accumulatedValue?: string | null;
   source: string;
 }
 
@@ -64,15 +69,20 @@ export class QuoteIntradayRepository {
     const valuePlaceholders: string[] = [];
 
     chunk.forEach((quote, index) => {
-      const baseIndex = index * 5;
+      const baseIndex = index * 10;
       valuePlaceholders.push(
-        `($${baseIndex + 1}::uuid, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`,
+        `($${baseIndex + 1}::uuid, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}::bigint, $${baseIndex + 9}::numeric, $${baseIndex + 10})`,
       );
       values.push(
         quote.symbolId,
         quote.ts,
         quote.price,
         quote.volume,
+        quote.matchType ?? null,
+        quote.tradeId ?? null,
+        quote.priceChange ?? null,
+        quote.accumulatedVolume ?? null,
+        quote.accumulatedValue ?? null,
         quote.source,
       );
     });
@@ -83,6 +93,11 @@ export class QuoteIntradayRepository {
         ts,
         price,
         volume,
+        "matchType",
+        "tradeId",
+        "priceChange",
+        "accumulatedVolume",
+        "accumulatedValue",
         source
       )
       VALUES ${valuePlaceholders.join(', ')}
@@ -90,6 +105,11 @@ export class QuoteIntradayRepository {
       DO UPDATE SET
         price = EXCLUDED.price,
         volume = EXCLUDED.volume,
+        "matchType" = COALESCE(EXCLUDED."matchType", quote_intraday."matchType"),
+        "tradeId" = COALESCE(EXCLUDED."tradeId", quote_intraday."tradeId"),
+        "priceChange" = COALESCE(EXCLUDED."priceChange", quote_intraday."priceChange"),
+        "accumulatedVolume" = COALESCE(EXCLUDED."accumulatedVolume", quote_intraday."accumulatedVolume"),
+        "accumulatedValue" = COALESCE(EXCLUDED."accumulatedValue", quote_intraday."accumulatedValue"),
         "ingestedAt" = CURRENT_TIMESTAMP
     `;
 

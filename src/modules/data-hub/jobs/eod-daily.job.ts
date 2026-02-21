@@ -75,7 +75,18 @@ export class EodDailyJob extends BaseJob {
             low: String(c.low),
             close: String(c.close),
             volume: String(c.volume),
-            value: c.value ? String(c.value) : undefined,
+            value: c.value !== undefined ? String(c.value) : undefined,
+            foreignBuyVolume:
+              c.foreignBuyVolume !== undefined ? String(c.foreignBuyVolume) : undefined,
+            foreignSellVolume:
+              c.foreignSellVolume !== undefined ? String(c.foreignSellVolume) : undefined,
+            foreignNetVolume:
+              c.foreignNetVolume !== undefined ? String(c.foreignNetVolume) : undefined,
+            putThroughVolume:
+              c.putThroughVolume !== undefined ? String(c.putThroughVolume) : undefined,
+            putThroughValue:
+              c.putThroughValue !== undefined ? String(c.putThroughValue) : undefined,
+            totalTrades: c.totalTrades !== undefined ? String(c.totalTrades) : undefined,
             sourceId: dataSource.id,
           }));
 

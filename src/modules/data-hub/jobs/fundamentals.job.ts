@@ -67,10 +67,29 @@ export class FundamentalsJob extends BaseJob {
             symbolId: tickerToId.get(s.ticker)!,
             asOf: new Date(s.asOf),
             pe: s.pe !== undefined ? String(s.pe) : undefined,
+            pb: s.pb !== undefined ? String(s.pb) : undefined,
+            ps: s.ps !== undefined ? String(s.ps) : undefined,
+            roe: s.roe !== undefined ? String(s.roe) : undefined,
+            roa: s.roa !== undefined ? String(s.roa) : undefined,
+            ev: s.ev !== undefined ? String(s.ev) : undefined,
             eps: s.eps !== undefined ? String(s.eps) : undefined,
             marketCap: s.marketCap !== undefined ? String(s.marketCap) : undefined,
             freeFloat: s.freeFloat !== undefined ? String(s.freeFloat) : undefined,
             sharesOut: s.sharesOut !== undefined ? String(s.sharesOut) : undefined,
+            foreignRoom:
+              s.foreignRoom !== undefined ? String(s.foreignRoom) : undefined,
+            foreignHoldingRoom:
+              s.foreignHoldingRoom !== undefined
+                ? String(s.foreignHoldingRoom)
+                : undefined,
+            currentHoldingRatio:
+              s.currentHoldingRatio !== undefined
+                ? String(s.currentHoldingRatio)
+                : undefined,
+            maxHoldingRatio:
+              s.maxHoldingRatio !== undefined ? String(s.maxHoldingRatio) : undefined,
+            avgMatchVolume2w:
+              s.avgMatchVolume2w !== undefined ? String(s.avgMatchVolume2w) : undefined,
             sourceId: dataSource.id,
           }));
 

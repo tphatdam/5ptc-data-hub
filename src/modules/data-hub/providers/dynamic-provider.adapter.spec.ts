@@ -5,9 +5,7 @@ describe('DynamicProviderAdapter', () => {
   it('logs fallback flow when provider A fails and provider B succeeds', async () => {
     const failingProvider = {
       code: 'VCI_API',
-      fetchIntradayCandles15m: jest
-        .fn()
-        .mockRejectedValue(new Error('timeout from VCI')),
+      fetchIntradayCandles15m: jest.fn().mockRejectedValue(new Error('timeout from VCI')),
     };
     const succeedingProvider = {
       code: 'TCBS_API',
@@ -60,6 +58,72 @@ describe('DynamicProviderAdapter', () => {
     );
 
     expect(result.providerCode).toBe('TCBS_API');
+    expect(logEvents).toEqual(
+      expect.arrayContaining([
+        'fallback_chain_start',
+        'fallback_provider_try',
+        'fallback_provider_fail',
+        'fallback_provider_success',
+      ]),
+    );
+
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('supports company-intel fallback chain and succeeds on backup provider', async () => {
+    const failingProvider = {
+      code: 'VCI_API',
+      fetchForeignTradingDaily: jest.fn().mockRejectedValue(new Error('provider A unavailable')),
+    };
+    const succeedingProvider = {
+      code: 'SIMPLIZE_API',
+      fetchForeignTradingDaily: jest.fn().mockResolvedValue([
+        {
+          ticker: 'AAA',
+          tradeDate: '2026-02-18',
+          buyVolume: 1000,
+          sellVolume: 500,
+          netVolume: 500,
+        },
+      ]),
+    };
+
+    const providerFactory = {
+      getCompanyIntelProviderEntries: jest.fn().mockResolvedValue([
+        { code: 'VCI_API', provider: failingProvider },
+        { code: 'SIMPLIZE_API', provider: succeedingProvider },
+      ]),
+    } as unknown as ProviderFactoryService;
+
+    const adapter = new DynamicProviderAdapter(providerFactory);
+    const logEvents: string[] = [];
+    const logSpy = jest
+      .spyOn((adapter as any).logger, 'log')
+      .mockImplementation((...args: unknown[]) => {
+        const message = String(args[0]);
+        logEvents.push(JSON.parse(message).event);
+      });
+    const warnSpy = jest
+      .spyOn((adapter as any).logger, 'warn')
+      .mockImplementation((...args: unknown[]) => {
+        const message = String(args[0]);
+        logEvents.push(JSON.parse(message).event);
+      });
+
+    const result = await adapter.invokeCompanyIntel(
+      'fetchForeignTradingDaily',
+      ['AAA', new Date('2026-02-18T00:00:00.000Z'), new Date('2026-02-19T00:00:00.000Z')],
+      {
+        logContext: {
+          module: 'test.company-intel-fallback',
+          cycleId: 'company-intel:intraday_refresh:2026-02-18T09:30:00+07:00',
+          ticker: 'AAA',
+        },
+      },
+    );
+
+    expect(result.providerCode).toBe('SIMPLIZE_API');
     expect(logEvents).toEqual(
       expect.arrayContaining([
         'fallback_chain_start',

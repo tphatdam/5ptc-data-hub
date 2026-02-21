@@ -1,4 +1,12 @@
-import { CandleDTO, IndexCandleDTO, SnapshotDTO, GoldPriceDTO, NewsArticleDTO } from '../dto';
+import {
+  CandleDTO,
+  IndexCandleDTO,
+  SnapshotDTO,
+  GoldPriceDTO,
+  NewsArticleDTO,
+  ForeignTradingDailyDTO,
+  InsiderEventDTO,
+} from '../dto';
 
 export interface MarketDataProvider {
   readonly code: string;
@@ -54,19 +62,37 @@ export interface SymbolListProvider {
   fetchSymbolList(): Promise<SymbolInfo[]>;
 }
 
+export interface CompanyIntelProvider {
+  readonly code: string;
+
+  fetchForeignTradingDaily(
+    ticker: string,
+    from: Date,
+    to: Date,
+  ): Promise<ForeignTradingDailyDTO[]>;
+
+  fetchInsiderEvents(
+    ticker: string,
+    from: Date,
+    to: Date,
+  ): Promise<InsiderEventDTO[]>;
+}
+
 export type ProviderCapability =
   | 'market'
   | 'fundamentals'
   | 'gold'
   | 'news'
-  | 'symbol-list';
+  | 'symbol-list'
+  | 'company-intel';
 
 export type AnyDataProvider =
   | MarketDataProvider
   | FundamentalsProvider
   | GoldPriceProvider
   | NewsProvider
-  | SymbolListProvider;
+  | SymbolListProvider
+  | CompanyIntelProvider;
 
 export interface RegisteredProvider<TProvider extends AnyDataProvider = AnyDataProvider> {
   code: string;

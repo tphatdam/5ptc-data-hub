@@ -4,10 +4,13 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { SymbolsRepository } from '../symbols/symbols.repository';
 import { QuoteDailyRepository, BulkUpsertQuoteDailyDto } from '../quotes/quote-daily.repository';
-import { QuoteIntradayRepository, BulkUpsertQuoteIntradayDto } from '../quotes/quote-intraday.repository';
+import {
+  QuoteIntradayRepository,
+  BulkUpsertQuoteIntradayDto,
+} from '../quotes/quote-intraday.repository';
 import { CrawlRunsRepository } from './crawl-runs.repository';
 import { MarketProvider } from '../providers/market-provider.interface';
-import { Symbol } from '../../db/entities/symbol.entity';
+import { Symbol as SymbolEntity } from '../../db/entities/symbol.entity';
 import { ForeignTradingDailyRepository } from '../company-data/foreign-trading-daily.repository';
 import { InsiderTradingEventRepository } from '../company-data/insider-trading-event.repository';
 import { StockRelatedPeerRepository } from '../company-data/stock-related-peer.repository';
@@ -162,9 +165,7 @@ export class IngestionService implements OnModuleInit {
         } catch (error) {
           errorsCount += 1;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.logger.warn(
-            `Failed foreign trading for symbol ${symbol.symbol}: ${errorMessage}`,
-          );
+          this.logger.warn(`Failed foreign trading for symbol ${symbol.symbol}: ${errorMessage}`);
         }
 
         try {
@@ -175,9 +176,7 @@ export class IngestionService implements OnModuleInit {
         } catch (error) {
           errorsCount += 1;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.logger.warn(
-            `Failed insider timeline for symbol ${symbol.symbol}: ${errorMessage}`,
-          );
+          this.logger.warn(`Failed insider timeline for symbol ${symbol.symbol}: ${errorMessage}`);
         }
 
         try {
@@ -188,9 +187,7 @@ export class IngestionService implements OnModuleInit {
         } catch (error) {
           errorsCount += 1;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.logger.warn(
-            `Failed related peers for symbol ${symbol.symbol}: ${errorMessage}`,
-          );
+          this.logger.warn(`Failed related peers for symbol ${symbol.symbol}: ${errorMessage}`);
         }
 
         try {
@@ -201,9 +198,7 @@ export class IngestionService implements OnModuleInit {
         } catch (error) {
           errorsCount += 1;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.logger.warn(
-            `Failed subsidiaries for symbol ${symbol.symbol}: ${errorMessage}`,
-          );
+          this.logger.warn(`Failed subsidiaries for symbol ${symbol.symbol}: ${errorMessage}`);
         }
 
         try {
@@ -310,8 +305,7 @@ export class IngestionService implements OnModuleInit {
 
     await this.executeIngestionJob('intraday-15m', this.provider.name, async (symbols) => {
       const startedAt = Date.now();
-      const timezone =
-        this.configService.get<string>('schedule.timezone') || 'Asia/Ho_Chi_Minh';
+      const timezone = this.configService.get<string>('schedule.timezone') || 'Asia/Ho_Chi_Minh';
       const bucketMeta = createIntradayBucketMeta(new Date(), timezone);
       const allTicks: BulkUpsertQuoteIntradayDto[] = [];
       let symbolsSucceeded = 0;
@@ -362,9 +356,7 @@ export class IngestionService implements OnModuleInit {
           allTicks.push(...ticksWithMetadata);
           symbolsSucceeded += 1;
 
-          this.logger.debug(
-            `Fetched ${ticks.length} intraday ticks for symbol ${symbol.symbol}`,
-          );
+          this.logger.debug(`Fetched ${ticks.length} intraday ticks for symbol ${symbol.symbol}`);
         } catch (error) {
           errorsCount += 1;
           this.logger.warn(
@@ -446,12 +438,9 @@ export class IngestionService implements OnModuleInit {
 
           allBars.push(...barsWithMetadata);
 
-          this.logger.debug(
-            `Fetched ${bars.length} daily bars for symbol ${symbol.symbol}`,
-          );
+          this.logger.debug(`Fetched ${bars.length} daily bars for symbol ${symbol.symbol}`);
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.logger.warn(
             `Failed to fetch daily data for symbol ${symbol.symbol}: ${errorMessage}`,
           );
@@ -476,7 +465,7 @@ export class IngestionService implements OnModuleInit {
   private async executeIngestionJob(
     jobName: string,
     source: string,
-    fetchAndStore: (symbols: Symbol[]) => Promise<Record<string, any>>,
+    fetchAndStore: (symbols: SymbolEntity[]) => Promise<Record<string, any>>,
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -485,17 +474,13 @@ export class IngestionService implements OnModuleInit {
       source,
     });
 
-    this.logger.log(
-      `Created crawl run ${crawlRun.id} for job ${jobName} from source ${source}`,
-    );
+    this.logger.log(`Created crawl run ${crawlRun.id} for job ${jobName} from source ${source}`);
 
     try {
       let symbols = await this.symbolsRepo.getAllActive();
 
       if (symbols.length === 0) {
-        this.logger.warn(
-          'No symbols found in database, fetching from provider to seed',
-        );
+        this.logger.warn('No symbols found in database, fetching from provider to seed');
 
         const symbolDTOs = await this.provider.fetchSymbols();
 
@@ -508,11 +493,8 @@ export class IngestionService implements OnModuleInit {
           try {
             await this.symbolsRepo.upsertSymbol(dto);
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : 'Unknown error';
-            this.logger.warn(
-              `Failed to upsert symbol ${dto.symbol}: ${errorMessage}`,
-            );
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.warn(`Failed to upsert symbol ${dto.symbol}: ${errorMessage}`);
             // Continue with other symbols
           }
         }
@@ -520,14 +502,10 @@ export class IngestionService implements OnModuleInit {
         // Reload symbols after seeding
         symbols = await this.symbolsRepo.getAllActive();
 
-        this.logger.log(
-          `Successfully seeded ${symbols.length} symbols to database`,
-        );
+        this.logger.log(`Successfully seeded ${symbols.length} symbols to database`);
       }
 
-      this.logger.log(
-        `Loaded ${symbols.length} active symbols for job ${jobName}`,
-      );
+      this.logger.log(`Loaded ${symbols.length} active symbols for job ${jobName}`);
 
       const resultStats = await fetchAndStore(symbols);
 
@@ -552,10 +530,7 @@ export class IngestionService implements OnModuleInit {
         durationMs,
       });
 
-      this.logger.error(
-        `Job ${jobName} failed after ${durationMs}ms: ${errorMessage}`,
-        errorStack,
-      );
+      this.logger.error(`Job ${jobName} failed after ${durationMs}ms: ${errorMessage}`, errorStack);
 
       // Re-throw to ensure the error is visible in logs
       throw error;

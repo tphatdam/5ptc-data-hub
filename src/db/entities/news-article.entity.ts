@@ -30,6 +30,9 @@ export class NewsArticle {
   summary: string | null;
 
   @Column({ type: 'text', nullable: true })
+  subtitle: string | null;
+
+  @Column({ type: 'text', nullable: true })
   content: string | null;
 
   @Column({ type: 'text', array: true, nullable: true })
@@ -40,6 +43,24 @@ export class NewsArticle {
 
   @Column({ type: 'varchar', length: 50 })
   source: string;
+
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  providerNewsId: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  languageCode: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  sourceLink: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  imageUrl: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  sourceCreatedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  sourceUpdatedAt: Date | null;
 
   @Column({ type: 'timestamptz' })
   fetchedAt: Date;

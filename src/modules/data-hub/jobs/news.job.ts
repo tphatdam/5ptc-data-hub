@@ -65,9 +65,16 @@ export class NewsJob extends BaseJob {
       publishedAt: a.publishedAt ? new Date(a.publishedAt) : undefined,
       title: a.title,
       summary: a.summary,
+      subtitle: a.subtitle,
       content: a.content,
       tickers: a.tickers,
       tags: a.tags,
+      providerNewsId: a.providerNewsId,
+      langCode: a.langCode,
+      sourceLink: a.sourceLink,
+      newsImageUrl: a.newsImageUrl,
+      sourceCreatedAt: a.sourceCreatedAt ? new Date(a.sourceCreatedAt) : undefined,
+      sourceUpdatedAt: a.sourceUpdatedAt ? new Date(a.sourceUpdatedAt) : undefined,
       fetchedAt: new Date(),
     }));
 

@@ -11,10 +11,12 @@ import {
   GoldPriceProvider,
   NewsProvider,
   SymbolListProvider,
+  CompanyIntelProvider,
   ProviderCapability,
   RegisteredProvider,
 } from './interfaces';
 import { ProviderRegistryService } from './provider-registry.service';
+import { SimplizeProvider } from './simplize.provider';
 
 export type ProviderEntry<TProvider extends AnyDataProvider> = RegisteredProvider<TProvider>;
 
@@ -29,9 +31,11 @@ export class ProviderFactoryService {
     private readonly configService: ConfigService,
     private readonly providerRegistry: ProviderRegistryService,
     private readonly tcbsProvider: TcbsProvider,
+    private readonly simplizeProvider: SimplizeProvider,
   ) {
     this.defaultProviderChain = this.loadDefaultProviderChain();
     this.registerProvider('TCBS_API', this.tcbsProvider);
+    this.registerProvider('SIMPLIZE_API', this.simplizeProvider);
   }
 
   private loadDefaultProviderChain(): string[] {
@@ -63,6 +67,9 @@ export class ProviderFactoryService {
     }
     if ('fetchSymbolList' in provider) {
       capabilities.push('symbol-list');
+    }
+    if ('fetchForeignTradingDaily' in provider || 'fetchInsiderEvents' in provider) {
+      capabilities.push('company-intel');
     }
 
     if (capabilities.length === 0) {
@@ -107,6 +114,14 @@ export class ProviderFactoryService {
   ): Promise<Array<ProviderEntry<SymbolListProvider>>> {
     const entries =
       this.providerRegistry.listByCapability<SymbolListProvider>('symbol-list');
+    return this.orderProviders(entries, preferredCodes);
+  }
+
+  async getCompanyIntelProviderEntries(
+    preferredCodes?: string[],
+  ): Promise<Array<ProviderEntry<CompanyIntelProvider>>> {
+    const entries =
+      this.providerRegistry.listByCapability<CompanyIntelProvider>('company-intel');
     return this.orderProviders(entries, preferredCodes);
   }
 
@@ -179,6 +194,17 @@ export class ProviderFactoryService {
       );
     }
     const entries = await this.getSymbolListProviderEntries();
+    return entries[0]?.provider || null;
+  }
+
+  async getCompanyIntelProvider(code?: string): Promise<CompanyIntelProvider | null> {
+    if (code) {
+      return (
+        this.providerRegistry.getByCode<CompanyIntelProvider>('company-intel', code)
+          ?.provider || null
+      );
+    }
+    const entries = await this.getCompanyIntelProviderEntries();
     return entries[0]?.provider || null;
   }
 

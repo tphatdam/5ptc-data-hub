@@ -13,4 +13,8 @@ export class LegacyMarketIngestionAdapter implements MarketIngestionPort {
   runDailyCompany(): Promise<void> {
     return this.ingestionService.runDailyCompany();
   }
+
+  runDailyEod(): Promise<void> {
+    return this.ingestionService.runDailyEOD();
+  }
 }

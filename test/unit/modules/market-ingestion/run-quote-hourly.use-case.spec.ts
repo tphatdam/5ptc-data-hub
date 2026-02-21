@@ -6,6 +6,7 @@ describe('RunQuoteHourlyUseCase', () => {
   const marketIngestionPort = {
     runQuoteHourly: jest.fn(async () => undefined),
     runDailyCompany: jest.fn(async () => undefined),
+    runDailyEod: jest.fn(async () => undefined),
   };
 
   let useCase: RunQuoteHourlyUseCase;

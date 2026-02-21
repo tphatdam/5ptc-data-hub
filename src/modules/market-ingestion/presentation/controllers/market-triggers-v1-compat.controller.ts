@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { InternalApiKeyGuard } from '../../../../common/guards/internal-api-key.guard';
 import { RunDailyCompanyUseCase } from '../../application/use-cases/run-daily-company.use-case';
 import { RunQuoteHourlyUseCase } from '../../application/use-cases/run-quote-hourly.use-case';
+import { RunDailyEodUseCase } from '../../application/use-cases/run-daily-eod.use-case';
 
 const V1_SUNSET_DATE = '2026-08-31';
 
@@ -14,6 +15,7 @@ export class MarketTriggersV1CompatController {
   constructor(
     private readonly runQuoteHourlyUseCase: RunQuoteHourlyUseCase,
     private readonly runDailyCompanyUseCase: RunDailyCompanyUseCase,
+    private readonly runDailyEodUseCase: RunDailyEodUseCase,
   ) {}
 
   @Get()
@@ -24,8 +26,10 @@ export class MarketTriggersV1CompatController {
       triggers: [
         { method: 'POST', path: '/triggers/ingestion/quote-hourly' },
         { method: 'POST', path: '/triggers/ingestion/daily-company' },
+        { method: 'POST', path: '/triggers/ingestion/daily-eod' },
         { method: 'POST', path: '/v2/triggers/market/quote-hourly' },
         { method: 'POST', path: '/v2/triggers/market/daily-company' },
+        { method: 'POST', path: '/v2/triggers/market/daily-eod' },
       ],
     };
   }
@@ -45,6 +49,15 @@ export class MarketTriggersV1CompatController {
 
     return this.run('daily-company', async () => {
       await this.runDailyCompanyUseCase.execute();
+    });
+  }
+
+  @Post('ingestion/daily-eod')
+  async triggerDailyEod(@Res({ passthrough: true }) res: Response) {
+    this.applyDeprecationHeaders(res);
+
+    return this.run('daily-eod', async () => {
+      await this.runDailyEodUseCase.execute();
     });
   }
 

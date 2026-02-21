@@ -139,6 +139,12 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           close: bar.close,
           volume: bar.volume,
           value: bar.value,
+          foreignBuyVolume: this.toNumber((bar as any).foreignBuyVolume, (bar as any).fb),
+          foreignSellVolume: this.toNumber((bar as any).foreignSellVolume, (bar as any).fs),
+          foreignNetVolume: this.toNumber((bar as any).foreignNetVolume, (bar as any).fnet),
+          putThroughVolume: this.toNumber((bar as any).putThroughVolume, (bar as any).ptq),
+          putThroughValue: this.toNumber((bar as any).putThroughValue, (bar as any).ptv),
+          totalTrades: this.toNumber((bar as any).totalTrades, (bar as any).tt),
         }));
         this.logFetchCompleted('daily', {
           ticker,
@@ -250,10 +256,20 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
           ticker,
           asOf: now,
           pe: data.pe ?? undefined,
+          pb: data.pb ?? undefined,
+          ps: data.ps ?? undefined,
+          roe: data.roe ?? undefined,
+          roa: data.roa ?? undefined,
+          ev: data.ev ?? undefined,
           eps: data.eps ?? undefined,
           marketCap: data.marketCap ?? undefined,
           freeFloat: data.freeFloat ?? undefined,
           sharesOut: data.sharesOutstanding ?? undefined,
+          foreignRoom: data.foreignTotalRoom ?? undefined,
+          foreignHoldingRoom: data.foreignHoldingRoom ?? undefined,
+          currentHoldingRatio: data.currentHoldingRatio ?? undefined,
+          maxHoldingRatio: data.maxHoldingRatio ?? undefined,
+          avgMatchVolume2w: data.averageMatchVolume2Week ?? undefined,
         } as SnapshotDTO;
         this.logFetchCompleted('snapshot', {
           ticker,
@@ -406,6 +422,19 @@ export class TcbsProvider implements MarketDataProvider, FundamentalsProvider, S
 
     await Promise.all(runners);
     return results;
+  }
+
+  private toNumber(...values: unknown[]): number | undefined {
+    for (const value of values) {
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      const parsed = typeof value === 'number' ? value : Number(String(value));
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return undefined;
   }
 
   private logFetchStarted(

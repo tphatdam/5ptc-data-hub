@@ -62,6 +62,12 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
       type: DataSourceType.MARKET,
     },
     {
+      code: 'SIMPLIZE_API',
+      name: 'Simplize API',
+      baseUrl: 'https://api2.simplize.vn',
+      type: DataSourceType.MARKET,
+    },
+    {
       code: 'SSI_API',
       name: 'SSI Securities API',
       baseUrl: 'https://iboard.ssi.com.vn',

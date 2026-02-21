@@ -1,21 +1,30 @@
 import 'reflect-metadata';
+import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
+import { getDatabaseSslOption } from '../../../config/database-url';
 import { seedDatabase } from './seed';
 import * as entities from '../entities';
 
+config();
+
 async function main() {
-  strapi.log.info('Connecting to database...');
-  
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error('DATABASE_URL is required');
+    process.exit(1);
+  }
+  const ssl = getDatabaseSslOption(databaseUrl);
+
   const dataSource = new DataSource({
     type: 'postgres',
-    url: process.env.DATABASE_URL,
+    url: databaseUrl,
     entities: Object.values(entities),
     synchronize: false,
     logging: false,
+    ...(ssl !== undefined && { ssl }),
   });
 
   await dataSource.initialize();
-  strapi.log.info('Database connected.');
 
   try {
     await seedDatabase(dataSource);
@@ -24,7 +33,6 @@ async function main() {
     process.exit(1);
   } finally {
     await dataSource.destroy();
-    strapi.log.info('Database connection closed.');
   }
 }
 

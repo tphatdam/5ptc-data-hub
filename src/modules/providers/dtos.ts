@@ -56,6 +56,34 @@ export class DailyBarDTO {
   @IsString()
   @IsNotEmpty()
   volume: string; // bigint as string
+
+  @IsOptional()
+  @IsString()
+  value?: string;
+
+  @IsOptional()
+  @IsString()
+  putThroughVolume?: string;
+
+  @IsOptional()
+  @IsString()
+  putThroughValue?: string;
+
+  @IsOptional()
+  @IsString()
+  foreignBuyVolume?: string;
+
+  @IsOptional()
+  @IsString()
+  foreignSellVolume?: string;
+
+  @IsOptional()
+  @IsString()
+  foreignNetVolume?: string;
+
+  @IsOptional()
+  @IsString()
+  totalTrades?: string;
 }
 
 /**
@@ -73,4 +101,24 @@ export class IntradayTickDTO {
   @IsString()
   @IsNotEmpty()
   volume: string; // bigint as string
+
+  @IsOptional()
+  @IsString()
+  matchType?: string;
+
+  @IsOptional()
+  @IsString()
+  tradeId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  priceChange?: number;
+
+  @IsOptional()
+  @IsString()
+  accumulatedVolume?: string;
+
+  @IsOptional()
+  @IsString()
+  accumulatedValue?: string;
 }

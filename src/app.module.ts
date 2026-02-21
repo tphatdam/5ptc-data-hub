@@ -14,11 +14,13 @@ import { IngestionModule } from './modules/ingestion/ingestion.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
+import { getDatabaseSslOption } from './config/database-url';
 import { validate } from './config/validate-env';
 import { MarketIngestionModule } from './modules/market-ingestion/market-ingestion.module';
 import { MarketReferenceModule } from './modules/market-reference/market-reference.module';
 import { MarketPricingModule } from './modules/market-pricing/market-pricing.module';
 import { CompanyIntelModule } from './modules/company-intel/company-intel.module';
+import { DataHubModule } from './modules/data-hub/data-hub.module';
 
 @Module({
   imports: [
@@ -34,28 +36,17 @@ import { CompanyIntelModule } from './modules/company-intel/company-intel.module
       useFactory: (configService: ConfigService) => {
         const nodeEnv = configService.get<string>('app.nodeEnv');
         const databaseUrl = configService.get<string>('database.url');
-
-        const baseConfig = {
+        if (!databaseUrl) {
+          throw new Error('DATABASE_URL is required');
+        }
+        const ssl = getDatabaseSslOption(databaseUrl);
+        return {
           type: 'postgres' as const,
+          url: databaseUrl,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: nodeEnv !== 'production',
           logging: nodeEnv === 'development',
-        };
-
-        if (databaseUrl) {
-          return {
-            ...baseConfig,
-            url: databaseUrl,
-          };
-        }
-
-        return {
-          ...baseConfig,
-          host: configService.get<string>('database.host'),
-          port: configService.get<number>('database.port'),
-          username: configService.get<string>('database.username'),
-          password: configService.get<string>('database.password'),
-          database: configService.get<string>('database.database'),
+          ...(ssl !== undefined && { ssl }),
         };
       },
     }),
@@ -84,6 +75,7 @@ import { CompanyIntelModule } from './modules/company-intel/company-intel.module
     MarketPricingModule,
     CompanyIntelModule,
     MarketIngestionModule,
+    DataHubModule,
   ],
 })
 export class AppModule implements NestModule {

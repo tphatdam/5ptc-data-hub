@@ -11,6 +11,13 @@ export interface BulkUpsertQuoteDailyDto {
   low: number;
   close: number;
   volume: string;
+  value?: string | null;
+  putThroughVolume?: string | null;
+  putThroughValue?: string | null;
+  foreignBuyVolume?: string | null;
+  foreignSellVolume?: string | null;
+  foreignNetVolume?: string | null;
+  totalTrades?: string | null;
   source: string;
 }
 
@@ -67,9 +74,9 @@ export class QuoteDailyRepository {
     const valuePlaceholders: string[] = [];
 
     chunk.forEach((quote, index) => {
-      const baseIndex = index * 8;
+      const baseIndex = index * 15;
       valuePlaceholders.push(
-        `($${baseIndex + 1}::uuid, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8})`,
+        `($${baseIndex + 1}::uuid, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}::numeric, $${baseIndex + 9}::bigint, $${baseIndex + 10}::numeric, $${baseIndex + 11}::bigint, $${baseIndex + 12}::bigint, $${baseIndex + 13}::bigint, $${baseIndex + 14}::bigint, $${baseIndex + 15})`,
       );
       values.push(
         quote.symbolId,
@@ -79,6 +86,13 @@ export class QuoteDailyRepository {
         quote.low,
         quote.close,
         quote.volume,
+        quote.value ?? null,
+        quote.putThroughVolume ?? null,
+        quote.putThroughValue ?? null,
+        quote.foreignBuyVolume ?? null,
+        quote.foreignSellVolume ?? null,
+        quote.foreignNetVolume ?? null,
+        quote.totalTrades ?? null,
         quote.source,
       );
     });
@@ -92,6 +106,13 @@ export class QuoteDailyRepository {
         low,
         close,
         volume,
+        value,
+        "putThroughVolume",
+        "putThroughValue",
+        "foreignBuyVolume",
+        "foreignSellVolume",
+        "foreignNetVolume",
+        "totalTrades",
         source
       )
       VALUES ${valuePlaceholders.join(', ')}
@@ -102,6 +123,13 @@ export class QuoteDailyRepository {
         low = EXCLUDED.low,
         close = EXCLUDED.close,
         volume = EXCLUDED.volume,
+        value = COALESCE(EXCLUDED.value, quote_daily.value),
+        "putThroughVolume" = COALESCE(EXCLUDED."putThroughVolume", quote_daily."putThroughVolume"),
+        "putThroughValue" = COALESCE(EXCLUDED."putThroughValue", quote_daily."putThroughValue"),
+        "foreignBuyVolume" = COALESCE(EXCLUDED."foreignBuyVolume", quote_daily."foreignBuyVolume"),
+        "foreignSellVolume" = COALESCE(EXCLUDED."foreignSellVolume", quote_daily."foreignSellVolume"),
+        "foreignNetVolume" = COALESCE(EXCLUDED."foreignNetVolume", quote_daily."foreignNetVolume"),
+        "totalTrades" = COALESCE(EXCLUDED."totalTrades", quote_daily."totalTrades"),
         "ingestedAt" = CURRENT_TIMESTAMP
     `;
 

@@ -5,6 +5,8 @@ export { MarketIndex } from './market-index.entity';
 export { IndexCandle } from './index-candle.entity';
 export { StockCandle } from './stock-candle.entity';
 export { StockSnapshot } from './stock-snapshot.entity';
+export { StockForeignTradingDaily } from './stock-foreign-trading-daily.entity';
+export { StockInsiderEvent } from './stock-insider-event.entity';
 export { GoldPrice } from './gold-price.entity';
 export { NewsArticle } from './news-article.entity';
 export { JobRun } from './job-run.entity';
