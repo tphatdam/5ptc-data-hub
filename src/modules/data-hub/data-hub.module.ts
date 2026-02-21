@@ -18,6 +18,11 @@ import {
   JobRun,
   StockForeignTradingDaily,
   StockInsiderEvent,
+  StockRelatedPeer,
+  CompanySubsidiary,
+  CompanyReport,
+  LegacyBackfillState,
+  LegacyBackfillError,
 } from './entities';
 
 import {
@@ -27,6 +32,8 @@ import {
   AdvisoryLockService,
   JobRunService,
   UpsertService,
+  LegacyBackfillService,
+  LegacyCompatViewService,
 } from './services';
 
 import {
@@ -48,6 +55,8 @@ import {
   GapFillJob,
   CompanyIntelJob,
   CompanyIntelProcessor,
+  DailyCompanyCompositeJob,
+  LegacyBackfillJob,
 } from './jobs';
 
 import { DataHubController } from './data-hub.controller';
@@ -65,6 +74,11 @@ const entities = [
   JobRun,
   StockForeignTradingDaily,
   StockInsiderEvent,
+  StockRelatedPeer,
+  CompanySubsidiary,
+  CompanyReport,
+  LegacyBackfillState,
+  LegacyBackfillError,
 ];
 
 const services = [
@@ -74,6 +88,8 @@ const services = [
   AdvisoryLockService,
   JobRunService,
   UpsertService,
+  LegacyBackfillService,
+  LegacyCompatViewService,
 ];
 
 const providers = [
@@ -95,6 +111,8 @@ const jobs = [
   GapFillJob,
   CompanyIntelJob,
   CompanyIntelProcessor,
+  DailyCompanyCompositeJob,
+  LegacyBackfillJob,
 ];
 
 @Module({

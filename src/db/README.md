@@ -15,9 +15,8 @@ This directory contains TypeORM entities, migrations, and database configuration
 ## Migration Pipeline
 
 - One unified migration entrypoint: `src/db/data-source.ts`
-- Includes migration directories:
+- Includes migration directory:
   - `src/db/migrations`
-  - `src/modules/data-hub/migrations`
 - Official run command: `npm run migration:run`
 
 ## Purpose:

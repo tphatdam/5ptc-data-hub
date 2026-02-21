@@ -9,6 +9,7 @@ import { QuotesModule } from '../quotes/quotes.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { CompanyDataModule } from '../company-data/company-data.module';
 import { SimplizeModule } from '../providers/simplize/simplize.module';
+import { DataHubModule } from '../data-hub/data-hub.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SimplizeModule } from '../providers/simplize/simplize.module';
     ProvidersModule,
     CompanyDataModule,
     SimplizeModule,
+    DataHubModule,
   ],
   providers: [IngestionService, CrawlRunsRepository],
   exports: [IngestionService, CrawlRunsRepository],

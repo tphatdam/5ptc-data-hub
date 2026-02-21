@@ -157,4 +157,37 @@ describe('IntradayMarketJob', () => {
     logSpy.mockRestore();
     warnSpy.mockRestore();
   });
+
+  it('runNow returns skipped outside trading hours', async () => {
+    const jobRunService = {
+      recordSkip: jest.fn().mockResolvedValue(undefined),
+    } as unknown as JobRunService;
+
+    const marketHoursService = {
+      isTradingTime: jest.fn().mockReturnValue(false),
+    } as unknown as MarketHoursService;
+
+    const job = new IntradayMarketJob(
+      jobRunService,
+      {} as AdvisoryLockService,
+      marketHoursService,
+      {
+        addMarketIntradayStockJob: jest.fn(),
+        addMarketIntradayIndexJob: jest.fn(),
+      } as unknown as QueueService,
+      {
+        get: jest.fn().mockReturnValue(undefined),
+      } as unknown as ConfigService,
+      {
+        find: jest.fn().mockResolvedValue([]),
+      } as unknown as Repository<Symbol>,
+      {
+        find: jest.fn().mockResolvedValue([]),
+      } as unknown as Repository<MarketIndex>,
+    );
+
+    const result = await job.runNow();
+    expect(result.status).toBe('skipped');
+    expect(jobRunService.recordSkip).toHaveBeenCalledWith('IntradayMarketJob', 'Not trading hours');
+  });
 });

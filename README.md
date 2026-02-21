@@ -54,13 +54,20 @@ npm run migration:run
 Migration note:
 
 - `npm run migration:run` is the single official migration command.
-- It runs both legacy migrations (`src/db/migrations`) and data-hub migrations (`src/modules/data-hub/migrations`) in timestamp order.
+- It runs all migrations from `src/db/migrations` in timestamp order.
+- It includes a preflight check to block dirty bootstrap states.
+- For container/runtime image use `npm run migration:run:prod`.
 
 4. (Optional) Seed the database with initial data:
 
 ```bash
 npm run db:seed
 ```
+
+Useful DB commands:
+
+- `npm run migration:undo`: revert the latest migration.
+- `npm run db:clear`: drop and recreate `public` schema (requires `DB_CLEAR_CONFIRM=YES`).
 
 ### Development Tools
 
@@ -135,6 +142,21 @@ Production mode:
 npm run build
 npm run start:prod
 ```
+
+Production bootstrap (migration + start + async bootstrap seed):
+
+```bash
+docker build -t exchange-provider .
+docker run --env-file .env exchange-provider
+```
+
+Container entrypoint flow:
+
+1. `node dist/cli/db-preflight.js`
+2. `npm run migration:run:prod`
+3. `node dist/main`
+4. Wait for `/health`
+5. Run `npm run seed:bootstrap:prod` in background (non-blocking)
 
 Debug mode:
 

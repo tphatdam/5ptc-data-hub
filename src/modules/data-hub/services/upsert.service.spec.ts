@@ -67,4 +67,84 @@ describe('UpsertService', () => {
 
     logSpy.mockRestore();
   });
+
+  it('upserts stock related peers with canonical conflict key', async () => {
+    const queryRunner = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      startTransaction: jest.fn().mockResolvedValue(undefined),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue([{ inserted: true }]),
+    } as unknown as QueryRunner;
+
+    const service = new UpsertService({
+      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+    } as unknown as DataSource);
+
+    const result = await service.upsertStockRelatedPeers([
+      {
+        symbolId: 1,
+        peerTicker: 'BBB',
+        relationType: 'sector',
+        score: 0.82,
+        sourceId: 99,
+      },
+    ]);
+
+    expect(result.processed).toBe(1);
+    expect((queryRunner.query as jest.Mock).mock.calls[0][0]).toContain('"stock_related_peer"');
+    expect((queryRunner.query as jest.Mock).mock.calls[0][0]).toContain(
+      'ON CONFLICT ("symbol_id", "peer_ticker", "source_id")',
+    );
+  });
+
+  it('upserts company subsidiaries and reports with expected unique keys', async () => {
+    const queryRunner = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      startTransaction: jest.fn().mockResolvedValue(undefined),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([{ inserted: true }])
+        .mockResolvedValueOnce([{ inserted: false }]),
+    } as unknown as QueryRunner;
+
+    const service = new UpsertService({
+      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+    } as unknown as DataSource);
+
+    await service.upsertCompanySubsidiaries([
+      {
+        parentSymbolId: 1,
+        subsidiaryName: 'ABC Holdings',
+        ownershipPercent: 51.2,
+        relationshipType: 'subsidiary',
+        sourceId: 7,
+      },
+    ]);
+
+    await service.upsertCompanyReports([
+      {
+        symbolId: 1,
+        reportType: 'annual',
+        title: 'Annual Report',
+        publishedAt: new Date('2026-01-01'),
+        fileUrl: 'https://example.com/report.pdf',
+        fileUrlHash: 'abc123',
+        sourceId: 7,
+      },
+    ]);
+
+    expect((queryRunner.query as jest.Mock).mock.calls[0][0]).toContain('"company_subsidiary"');
+    expect((queryRunner.query as jest.Mock).mock.calls[0][0]).toContain(
+      'ON CONFLICT ("parent_symbol_id", "subsidiary_name", "source_id")',
+    );
+    expect((queryRunner.query as jest.Mock).mock.calls[1][0]).toContain('"company_report"');
+    expect((queryRunner.query as jest.Mock).mock.calls[1][0]).toContain(
+      'ON CONFLICT ("symbol_id", "file_url_hash", "source_id")',
+    );
+  });
 });

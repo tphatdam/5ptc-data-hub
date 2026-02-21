@@ -46,6 +46,17 @@ export class IntradayMarketJob extends BaseJob {
     });
   }
 
+  async runNow(): Promise<{ status: 'triggered' | 'skipped'; reason?: string }> {
+    if (!this.marketHoursService.isTradingTime()) {
+      const reason = 'Not trading hours';
+      await this.jobRunService.recordSkip(this.jobName, reason);
+      return { status: 'skipped', reason };
+    }
+
+    await this.runWithLock({}, async () => this.execute());
+    return { status: 'triggered' };
+  }
+
   private async execute(): Promise<number> {
     const startedAt = Date.now();
     const now = new Date();

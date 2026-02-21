@@ -4,3 +4,5 @@ export * from './cheerio-parser.service';
 export * from './advisory-lock.service';
 export * from './job-run.service';
 export * from './upsert.service';
+export * from './legacy-backfill.service';
+export * from './legacy-compat-view.service';

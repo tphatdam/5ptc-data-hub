@@ -22,6 +22,7 @@ All feature modules are under `modules/<name>/`.
 | `company-data` | Company/report/news repositories (TypeORM) |
 | `company-intel` | Thin re-export of company-data |
 | `data-hub` | Jobs, providers, entities (TCBS, intraday, etc.) |
+| `exchange-provider` | Canonical aggregation module for exchange-data runtime |
 | `health` | Health check controller |
 | `ingestion` | Core ingestion service and crawl runs |
 | `market-ingestion` | Trigger API and use cases (application/domain/infrastructure/presentation) |

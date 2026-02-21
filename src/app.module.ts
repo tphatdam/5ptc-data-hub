@@ -8,19 +8,11 @@ import { HealthModule } from './modules/health/health.module';
 import { BrevoModule } from './modules/brevo/brevo.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
-import { QuotesModule } from './modules/quotes/quotes.module';
-import { ProvidersModule } from './modules/providers/providers.module';
-import { IngestionModule } from './modules/ingestion/ingestion.module';
-import { SeedModule } from './modules/seed/seed.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 import configuration from './config/configuration';
 import { getDatabaseSslOption } from './config/database-url';
 import { validate } from './config/validate-env';
-import { MarketIngestionModule } from './modules/market-ingestion/market-ingestion.module';
-import { MarketReferenceModule } from './modules/market-reference/market-reference.module';
-import { MarketPricingModule } from './modules/market-pricing/market-pricing.module';
-import { CompanyIntelModule } from './modules/company-intel/company-intel.module';
-import { DataHubModule } from './modules/data-hub/data-hub.module';
+import { ExchangeProviderModule } from './modules/exchange-provider/exchange-provider.module';
 
 @Module({
   imports: [
@@ -36,17 +28,30 @@ import { DataHubModule } from './modules/data-hub/data-hub.module';
       useFactory: (configService: ConfigService) => {
         const nodeEnv = configService.get<string>('app.nodeEnv');
         const databaseUrl = configService.get<string>('database.url');
-        if (!databaseUrl) {
-          throw new Error('DATABASE_URL is required');
-        }
-        const ssl = getDatabaseSslOption(databaseUrl);
-        return {
+
+        const baseConfig = {
           type: 'postgres' as const,
           url: databaseUrl,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: nodeEnv !== 'production',
+          synchronize: false,
           logging: nodeEnv === 'development',
-          ...(ssl !== undefined && { ssl }),
+        };
+
+        if (databaseUrl) {
+          const ssl = getDatabaseSslOption(databaseUrl);
+          return {
+            ...baseConfig,
+            ...(ssl !== undefined && { ssl }),
+          };
+        }
+
+        return {
+          ...baseConfig,
+          host: configService.get<string>('database.host'),
+          port: configService.get<number>('database.port'),
+          username: configService.get<string>('database.username'),
+          password: configService.get<string>('database.password'),
+          database: configService.get<string>('database.database'),
         };
       },
     }),
@@ -67,15 +72,7 @@ import { DataHubModule } from './modules/data-hub/data-hub.module';
     ReportingModule,
     AiModule,
     HealthModule,
-    QuotesModule,
-    ProvidersModule,
-    IngestionModule,
-    SeedModule,
-    MarketReferenceModule,
-    MarketPricingModule,
-    CompanyIntelModule,
-    MarketIngestionModule,
-    DataHubModule,
+    ExchangeProviderModule,
   ],
 })
 export class AppModule implements NestModule {

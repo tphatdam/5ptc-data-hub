@@ -14,6 +14,9 @@ import { StockCandle } from './stock-candle.entity';
 import { StockSnapshot } from './stock-snapshot.entity';
 import { StockForeignTradingDaily } from './stock-foreign-trading-daily.entity';
 import { StockInsiderEvent } from './stock-insider-event.entity';
+import { StockRelatedPeer } from './stock-related-peer.entity';
+import { CompanySubsidiary } from './company-subsidiary.entity';
+import { CompanyReport } from './company-report.entity';
 
 @Entity('symbol')
 export class Symbol {
@@ -66,4 +69,13 @@ export class Symbol {
 
   @OneToMany(() => StockInsiderEvent, (insiderEvent) => insiderEvent.symbol)
   insiderEvents: StockInsiderEvent[];
+
+  @OneToMany(() => StockRelatedPeer, (relatedPeer) => relatedPeer.symbol)
+  relatedPeers: StockRelatedPeer[];
+
+  @OneToMany(() => CompanySubsidiary, (subsidiary) => subsidiary.parentSymbol)
+  subsidiaries: CompanySubsidiary[];
+
+  @OneToMany(() => CompanyReport, (report) => report.symbol)
+  reports: CompanyReport[];
 }

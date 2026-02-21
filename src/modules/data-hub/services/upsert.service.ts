@@ -411,6 +411,82 @@ export class UpsertService {
     );
   }
 
+  async upsertStockRelatedPeers(
+    rows: Array<{
+      symbolId: number;
+      peerTicker: string;
+      relationType?: string | null;
+      score?: number | null;
+      sourceId: number;
+    }>,
+  ): Promise<UpsertResult> {
+    return this.batchUpsert(
+      'stock_related_peer',
+      rows,
+      ['symbol_id', 'peer_ticker', 'source_id'],
+      ['relation_type', 'score'],
+      (row) => ({
+        symbol_id: row.symbolId,
+        peer_ticker: row.peerTicker,
+        relation_type: row.relationType ?? null,
+        score: row.score ?? null,
+        source_id: row.sourceId,
+      }),
+    );
+  }
+
+  async upsertCompanySubsidiaries(
+    rows: Array<{
+      parentSymbolId: number;
+      subsidiaryName: string;
+      ownershipPercent?: number | null;
+      relationshipType?: string | null;
+      sourceId: number;
+    }>,
+  ): Promise<UpsertResult> {
+    return this.batchUpsert(
+      'company_subsidiary',
+      rows,
+      ['parent_symbol_id', 'subsidiary_name', 'source_id'],
+      ['ownership_percent', 'relationship_type'],
+      (row) => ({
+        parent_symbol_id: row.parentSymbolId,
+        subsidiary_name: row.subsidiaryName,
+        ownership_percent: row.ownershipPercent ?? null,
+        relationship_type: row.relationshipType ?? null,
+        source_id: row.sourceId,
+      }),
+    );
+  }
+
+  async upsertCompanyReports(
+    rows: Array<{
+      symbolId: number;
+      reportType: string;
+      title?: string | null;
+      publishedAt?: Date | null;
+      fileUrl: string;
+      fileUrlHash: string;
+      sourceId: number;
+    }>,
+  ): Promise<UpsertResult> {
+    return this.batchUpsert(
+      'company_report',
+      rows,
+      ['symbol_id', 'file_url_hash', 'source_id'],
+      ['report_type', 'title', 'published_at', 'file_url'],
+      (row) => ({
+        symbol_id: row.symbolId,
+        report_type: row.reportType,
+        title: row.title ?? null,
+        published_at: row.publishedAt ?? null,
+        file_url: row.fileUrl,
+        file_url_hash: row.fileUrlHash,
+        source_id: row.sourceId,
+      }),
+    );
+  }
+
   private async batchUpsert<T>(
     tableName: string,
     items: T[],

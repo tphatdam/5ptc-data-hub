@@ -19,6 +19,11 @@ import { NewsArticleRepository } from '../company-data/news-article.repository';
 import { CompanyReportRepository } from '../company-data/company-report.repository';
 import { SimplizeService } from '../providers/simplize/simplize.service';
 import {
+  DailyCompanyCompositeJob,
+  EodDailyJob,
+  IntradayMarketJob,
+} from '../data-hub/jobs';
+import {
   mapForeignTradingToRows,
   mapInsiderTimelineToRows,
   mapLatestQuoteToIntraday,
@@ -57,6 +62,9 @@ export class IngestionService implements OnModuleInit {
     private readonly provider: MarketProvider,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly intradayMarketJob: IntradayMarketJob,
+    private readonly dailyCompanyCompositeJob: DailyCompanyCompositeJob,
+    private readonly eodDailyJob: EodDailyJob,
   ) {}
 
   /**
@@ -64,6 +72,13 @@ export class IngestionService implements OnModuleInit {
    * This allows operators to customize job schedules without code changes.
    */
   onModuleInit() {
+    if (this.isDatahubMode()) {
+      this.logger.log(
+        'unified.mode=datahub -> skipping legacy dynamic cron registration (quote-hourly, daily-company)',
+      );
+      return;
+    }
+
     const quoteHourlyCron =
       this.configService.get<string>('schedule.quoteHourlyCron') || '0 * * * *';
     const dailyCompanyCron =
@@ -105,6 +120,14 @@ export class IngestionService implements OnModuleInit {
   }
 
   async runQuoteHourly(): Promise<void> {
+    if (this.isDatahubMode()) {
+      const result = await this.intradayMarketJob.runNow();
+      if (result.status === 'skipped') {
+        this.logger.log(`quote-hourly delegated to data-hub and skipped: ${result.reason}`);
+      }
+      return;
+    }
+
     this.logger.log('Starting quote-hourly job');
 
     await this.executeIngestionJob('quote-hourly', 'SIMPLIZE', async (symbols) => {
@@ -138,6 +161,11 @@ export class IngestionService implements OnModuleInit {
   }
 
   async runDailyCompany(): Promise<void> {
+    if (this.isDatahubMode()) {
+      await this.dailyCompanyCompositeJob.runNow();
+      return;
+    }
+
     this.logger.log('Starting daily-company job');
 
     await this.executeIngestionJob('daily-company', 'SIMPLIZE', async (symbols) => {
@@ -409,6 +437,11 @@ export class IngestionService implements OnModuleInit {
    * Timezone is configured via SCHEDULE_TIMEZONE environment variable (default: Asia/Ho_Chi_Minh).
    */
   async runDailyEOD(): Promise<void> {
+    if (this.isDatahubMode()) {
+      await this.eodDailyJob.runNow();
+      return;
+    }
+
     this.logger.log('Starting daily-eod job');
 
     await this.executeIngestionJob('daily-eod', this.provider.name, async (symbols) => {
@@ -557,5 +590,10 @@ export class IngestionService implements OnModuleInit {
       return payload.data.data;
     }
     return [];
+  }
+
+  private isDatahubMode(): boolean {
+    const mode = (this.configService.get<string>('unified.mode') || 'legacy').toLowerCase();
+    return mode === 'datahub';
   }
 }

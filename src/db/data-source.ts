@@ -11,23 +11,32 @@ config();
  */
 
 const getDatabaseConfig = (): DataSourceOptions => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for migrations');
-  }
-  const ssl = getDatabaseSslOption(databaseUrl);
-  return {
+  const baseConfig: DataSourceOptions = {
     type: 'postgres',
-    url: databaseUrl,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    migrations: [
-      __dirname + '/migrations/*{.ts,.js}',
-      __dirname + '/../modules/data-hub/migrations/*{.ts,.js}',
-    ],
-    synchronize: process.env.NODE_ENV !== 'production',
+    migrations: [__dirname + '/migrations/*{.ts,.js}'],
+    synchronize: false,
     logging: process.env.NODE_ENV === 'development',
-    ...(ssl !== undefined && { ssl }),
-  } as DataSourceOptions;
+  };
+
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl) {
+    const ssl = getDatabaseSslOption(databaseUrl);
+    return {
+      ...baseConfig,
+      url: databaseUrl,
+      ...(ssl !== undefined && { ssl }),
+    };
+  }
+
+  return {
+    ...baseConfig,
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'vnstock_hub',
+  };
 };
 
 // Create and export the DataSource instance

@@ -22,6 +22,13 @@ export default () => ({
     dailyCompanyCron: process.env.DAILY_COMPANY_CRON || '0 18 * * *',
     timezone: process.env.SCHEDULE_TIMEZONE || 'Asia/Ho_Chi_Minh',
   },
+  unified: {
+    mode: (process.env.UNIFIED_MODE || 'legacy').toLowerCase(),
+    backfillEnabled: process.env.UNIFIED_BACKFILL_ENABLED === 'true',
+    backfillBatchSize: parseInt(process.env.UNIFIED_BACKFILL_BATCH_SIZE || '500', 10),
+    newsSourceMode: (process.env.UNIFIED_NEWS_SOURCE_MODE || 'daily-company').toLowerCase(),
+    legacyCompatViewsEnabled: process.env.UNIFIED_LEGACY_COMPAT_VIEWS_ENABLED === 'true',
+  },
   simplize: {
     baseUrl: process.env.SIMPLIZE_BASE_URL || 'https://api2.simplize.vn',
     authToken: process.env.SIMPLIZE_AUTH_TOKEN,

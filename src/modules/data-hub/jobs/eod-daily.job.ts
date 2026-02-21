@@ -39,6 +39,10 @@ export class EodDailyJob extends BaseJob {
     });
   }
 
+  async runNow(): Promise<void> {
+    await this.runWithLock({}, async () => this.execute());
+  }
+
   private async execute(): Promise<number> {
     const today = new Date();
     let totalItems = 0;

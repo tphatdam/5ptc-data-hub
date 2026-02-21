@@ -45,11 +45,43 @@ async function bootstrap() {
   SwaggerModule.setup('api-docs', app, document);
 
   const port = process.env.PORT || 5000;
-  await app.listen(port, '0.0.0.0');
+  const host = '0.0.0.0';
+  // Run init() (registers routes, lifecycle hooks). If it hangs (e.g. onApplicationBootstrap in a provider),
+  // proceed after timeout and bind the server so the app still starts.
+  const initPromise = (app as { isInitialized?: boolean }).isInitialized
+    ? Promise.resolve()
+    : (app as { init: () => Promise<unknown> }).init();
+  const INIT_TIMEOUT_MS = 10_000;
+  await Promise.race([
+    initPromise,
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error(`init() did not complete within ${INIT_TIMEOUT_MS}ms`)), INIT_TIMEOUT_MS),
+    ),
+  ]).catch((err) => {
+    logger.warn(`Init timeout or error (continuing to listen): ${err instanceof Error ? err.message : String(err)}`);
+  });
 
-  logger.log(`PDF Generator service running on port ${port}`);
+  const httpServer = app.getHttpServer();
+  await new Promise<void>((resolve, reject) => {
+    const onError = (err: Error) => {
+      httpServer.removeListener('listening', onListen);
+      reject(err);
+    };
+    const onListen = () => {
+      httpServer.removeListener('error', onError);
+      resolve();
+    };
+    httpServer.once('error', onError);
+    httpServer.once('listening', onListen);
+    httpServer.listen(Number(port), host);
+  });
+
+  logger.log(`5PTC Data hub service running on port ${port}`);
   logger.log(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
   logger.log('Server ready - browser will initialize on first PDF request');
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Bootstrap failed:', err);
+  process.exit(1);
+});

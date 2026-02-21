@@ -15,12 +15,13 @@ export class SeedBootstrapService implements OnApplicationBootstrap {
     this.logger.setContext(SeedBootstrapService.name);
   }
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     const runSeed = this.configService.get<boolean>('seed.run');
     if (!runSeed) {
       this.logger.info('Seed skipped (RUN_SEED=false)');
       return;
     }
+    // Fire-and-forget: do not await so app.listen() is not blocked
     this.seedQueue
       .add(SEED_JOB_SYMBOLS, {}, { removeOnComplete: true, attempts: 1 })
       .then(() => {
