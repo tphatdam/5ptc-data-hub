@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { QueueService } from '../../../queue/queue.service';
 import {
   TRIGGER_ORCHESTRATOR_RUN_ALL_JOB,
@@ -8,6 +8,8 @@ import { TriggerRunStatusDto } from '../../application/dto/trigger-run-status.dt
 
 @Injectable()
 export class TriggerOrchestratorService {
+  private readonly logger = new Logger(TriggerOrchestratorService.name);
+
   constructor(
     private readonly queueService: QueueService,
     private readonly triggerRunService: TriggerRunService,
@@ -24,6 +26,7 @@ export class TriggerOrchestratorService {
         jobId: `${TRIGGER_ORCHESTRATOR_RUN_ALL_JOB}:${run.id}`,
       },
     );
+    this.logger.log(`Run-all accepted and queued runId=${run.id}`);
 
     return {
       runId: run.id,

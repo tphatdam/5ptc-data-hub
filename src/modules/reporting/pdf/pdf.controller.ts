@@ -122,7 +122,7 @@ export class PdfController {
     }, timeout);
 
     try {
-      strapi.log.info(`Starting stock report generation for ${generateStockReportDto.stock_code}...`);
+      console.log(`Starting stock report generation for ${generateStockReportDto.stock_code}...`);
 
       const reportData = await this.stockReportService.generateStockReport(
         generateStockReportDto.stock_code,
@@ -188,16 +188,16 @@ Hãy phân tích định giá cho mã cổ phiếu Việt Nam ${body.stock_code}
 
 LƯU Ý: ${body.stock_code} là mã cổ phiếu VIỆT NAM (VD: VIC = Vingroup, VNM = Vinamilk). KHÔNG định giá công ty nước ngoài.`;
 
-      strapi.log.info('\n=== TESTING VALUATION PROMPT ===');
-      strapi.log.info('Stock code:', body.stock_code);
-      strapi.log.info('Prompt length:', valuationPrompt.length);
+      console.log('\n=== TESTING VALUATION PROMPT ===');
+      console.log('Stock code:', body.stock_code);
+      console.log('Prompt length:', valuationPrompt.length);
 
       const result = await this.openAIService.askOpenAIWithRetry(valuationPrompt, '', 1);
 
-      strapi.log.info('\n=== RAW API RESPONSE ===');
-      strapi.log.info('Response length:', result.answers?.length || 0);
-      strapi.log.info('ConversationID:', result.conversationID);
-      strapi.log.info('First 1000 chars:', result.answers?.substring(0, 1000));
+      console.log('\n=== RAW API RESPONSE ===');
+      console.log('Response length:', result.answers?.length || 0);
+      console.log('ConversationID:', result.conversationID);
+      console.log('First 1000 chars:', result.answers?.substring(0, 1000));
 
       let parsedData = null;
       let parseMethod = 'none';
@@ -205,9 +205,9 @@ LƯU Ý: ${body.stock_code} là mã cổ phiếu VIỆT NAM (VD: VIC = Vingroup,
       try {
         parsedData = JSON.parse(result.answers);
         parseMethod = 'direct';
-        strapi.log.info('\n✓ Direct JSON parse succeeded');
+        console.log('\n✓ Direct JSON parse succeeded');
       } catch (e: any) {
-        strapi.log.info('\n✗ Direct JSON parse failed:', e.message);
+        console.log('\n✗ Direct JSON parse failed:', e.message);
         parseMethod = 'extraction';
       }
 

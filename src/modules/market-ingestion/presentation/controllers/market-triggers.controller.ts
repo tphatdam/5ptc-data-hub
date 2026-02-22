@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { InternalApiKeyGuard } from '../../../../common/guards/internal-api-key.guard';
 import { RunDailyCompanyUseCase } from '../../application/use-cases/run-daily-company.use-case';
@@ -9,6 +9,7 @@ import { RunAllTriggersUseCase } from '../../application/use-cases/run-all-trigg
 import { GetTriggerRunStatusUseCase } from '../../application/use-cases/get-trigger-run-status.use-case';
 
 @ApiTags('Triggers')
+@ApiSecurity('apiKey')
 @UseGuards(InternalApiKeyGuard)
 @Controller('triggers')
 export class MarketTriggersController {

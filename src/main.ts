@@ -51,6 +51,15 @@ async function bootstrap() {
       },
       'bearer', // This is the security name that can be referenced later
     )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'x-api-key',
+        in: 'header',
+        description: 'Internal API key for triggers (INTERNAL_API_KEY)',
+      },
+      'apiKey',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

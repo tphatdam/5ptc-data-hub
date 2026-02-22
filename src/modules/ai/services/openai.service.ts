@@ -74,15 +74,15 @@ export class OpenAIService {
 
     // If external AI is not configured, use official OpenAI immediately.
     if (!this.externalApiEnabled) {
-      strapi.log.info('External AI not configured; using OpenAI official API directly.');
+      console.log('External AI not configured; using OpenAI official API directly.');
       return await this.askOpenAIOfficial(prompt, conversationID);
     }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        strapi.log.info(`External AI API attempt ${attempt}/${maxRetries}...`);
+        console.log(`External AI API attempt ${attempt}/${maxRetries}...`);
         const result = await this.askOpenAI(prompt, conversationID);
-        strapi.log.info(`✓ External AI API attempt ${attempt} succeeded`);
+        console.log(`✓ External AI API attempt ${attempt} succeeded`);
 
         this.addToConversationHistory(
           result.conversationID,
@@ -99,10 +99,10 @@ export class OpenAIService {
         const message = String(err.message || '').toUpperCase();
         const isConnectTimeout = message.includes('UND_ERR_CONNECT_TIMEOUT') || message.includes('FETCH FAILED');
         if (isConnectTimeout && this.configService.get<string>('OPENAI_API_KEY')) {
-          strapi.log.info('Network/connect timeout detected; falling back to OpenAI official API.');
+          console.log('Network/connect timeout detected; falling back to OpenAI official API.');
           try {
             const result = await this.askOpenAIOfficial(prompt, conversationID);
-            strapi.log.info('✓ OpenAI official API fallback succeeded');
+            console.log('✓ OpenAI official API fallback succeeded');
             this.addToConversationHistory(result.conversationID, prompt, result.answers);
             return result;
           } catch (fallbackError: any) {
@@ -118,7 +118,7 @@ export class OpenAIService {
 
         if (attempt < maxRetries) {
           const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-          strapi.log.info(`Retrying in ${delayMs}ms...`);
+          console.log(`Retrying in ${delayMs}ms...`);
           await this.sleep(delayMs);
         }
       }
@@ -126,11 +126,11 @@ export class OpenAIService {
 
     if (this.configService.get<string>('OPENAI_API_KEY')) {
       try {
-        strapi.log.info(
+        console.log(
           '⚠ External API failed - trying OpenAI official API as fallback...',
         );
         const result = await this.askOpenAIOfficial(prompt, conversationID);
-        strapi.log.info('✓ OpenAI official API fallback succeeded');
+        console.log('✓ OpenAI official API fallback succeeded');
 
         this.addToConversationHistory(
           result.conversationID,

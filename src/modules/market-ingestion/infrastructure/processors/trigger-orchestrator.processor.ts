@@ -44,6 +44,9 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
     if (job.name !== TRIGGER_ORCHESTRATOR_RUN_ALL_JOB) {
       throw new Error(`Unsupported orchestrator job ${job.name}`);
     }
+    this.logger.log(
+      `Run-all job picked up from queue runId=${job.data.runId} jobId=${job.id}`,
+    );
     await this.processRunAll(job.data);
   }
 
@@ -52,6 +55,7 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
     let sequence = 1;
     const stepStatuses: TriggerRunStepStatus[] = [];
 
+    this.logger.log(`Run-all started runId=${runId} mode=${payload.mode}`);
     await this.triggerRunService.markRunStarted(runId);
     try {
       stepStatuses.push(
@@ -114,6 +118,9 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
       const skipped = stepStatuses.filter((status) => status === TriggerRunStepStatus.SKIP).length;
       const success = stepStatuses.filter((status) => status === TriggerRunStepStatus.SUCCESS).length;
 
+      this.logger.log(
+        `Run-all completed runId=${runId} success=${success} failed=${failed} skipped=${skipped}`,
+      );
       await this.triggerRunService.markRunCompleted(
         runId,
         failed > 0 ? TriggerRunStatus.PARTIAL : TriggerRunStatus.SUCCESS,
@@ -140,6 +147,7 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
     stepName: string,
     executor: () => Promise<{ status?: 'triggered' | 'skipped'; reason?: string; meta?: Record<string, any> }>,
   ): Promise<TriggerRunStepStatus> {
+    this.logger.log(`Run-all step ${sequence}: ${stepName} started runId=${runId}`);
     const step = await this.triggerRunService.startStep(runId, sequence, stepName);
     try {
       const result = await executor();
@@ -149,12 +157,18 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
         errorText: result.reason || null,
         meta: result.meta || null,
       });
+      this.logger.log(
+        `Run-all step ${sequence}: ${stepName} finished runId=${runId} status=${status}`,
+      );
       return status;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown step error';
       await this.triggerRunService.finishStep(step.id, TriggerRunStepStatus.FAIL, {
         errorText: message,
       });
+      this.logger.warn(
+        `Run-all step ${sequence}: ${stepName} failed runId=${runId} error=${message}`,
+      );
       return TriggerRunStepStatus.FAIL;
     }
   }

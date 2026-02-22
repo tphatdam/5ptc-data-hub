@@ -57,10 +57,10 @@ export class ReportProcessor extends WorkerHost {
 
     try {
       const result = await this.executeReportGeneration(stock, email, queueJobId);
-      strapi.log.info(`✅ Success`);
+      console.log(`✅ Success`);
       return result;
     } catch (err) {
-      strapi.log.info(`❌ Fail ${job.attemptsMade + 1}, retry in 3 min`);
+      console.log(`❌ Fail ${job.attemptsMade + 1}, retry in 3 min`);
       throw err;
     }
   }
@@ -73,15 +73,15 @@ export class ReportProcessor extends WorkerHost {
     const reportDate = new Date().toISOString().split("T")[0];
     const jobStartTime = Date.now();
 
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][Job:${jobId}] ========== STARTING JOB ==========`,
     );
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][Job:${jobId}] Processing stock report - Stock: ${stock}, Date: ${reportDate}, Email: ${email}`,
     );
 
     try {
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 1/5: Checking for existing report`,
       );
       const checkStart = Date.now();
@@ -98,35 +98,35 @@ export class ReportProcessor extends WorkerHost {
         
         // Check if this is a placeholder row (no URL yet) - need to regenerate
         if (!pdfUrl || pdfUrl.trim().length === 0) {
-          strapi.log.info(
+          console.log(
             `[ReportProcessor][Job:${jobId}] Existing report is a placeholder (no URL) - proceeding with generation`,
           );
         } else {
-          strapi.log.info(
+          console.log(
             `[ReportProcessor][Job:${jobId}] Existing report found in ${checkDuration}ms - PDF URL: ${pdfUrl}`,
           );
           if (email) {
-            strapi.log.info(
+            console.log(
               `[ReportProcessor][Job:${jobId}] Sending email for cached report`,
             );
             await this.sendReportEmail(stock, reportDate, pdfUrl, email);
           } else {
-            strapi.log.info(
+            console.log(
               `[ReportProcessor][Job:${jobId}] No email provided - skipping email notification`,
             );
           }
           const totalDuration = Date.now() - jobStartTime;
-          strapi.log.info(
+          console.log(
             `[ReportProcessor][Job:${jobId}] ========== JOB COMPLETED (CACHED) in ${totalDuration}ms ==========`,
           );
           return { success: true, url: pdfUrl, cached: true };
         }
       }
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] No existing report found (checked in ${checkDuration}ms), proceeding with generation`,
       );
 
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 2/6: Generating AI stock report`,
       );
       const aiStart = Date.now();
@@ -137,18 +137,18 @@ export class ReportProcessor extends WorkerHost {
         `[ReportProcessor][Job:${jobId}] AI generation`,
       );
       const aiDuration = Date.now() - aiStart;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] AI report generated successfully in ${aiDuration}ms - Data size: ${JSON.stringify(reportData).length} bytes`,
       );
 
       const conclusion = reportData.sections?.find((s: any) => s.id === 'conclusion');
       const rawRecommendation = conclusion?.data?.recommendation;
       const investmentRecommendation = mapRecommendation(rawRecommendation);
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Extracted recommendation - Raw: ${rawRecommendation}, Mapped: ${investmentRecommendation}`,
       );
 
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 3/6: Converting report to HTML`,
       );
       const htmlStart = Date.now();
@@ -159,23 +159,23 @@ export class ReportProcessor extends WorkerHost {
         `[ReportProcessor][Job:${jobId}] HTML generation`,
       );
       const htmlDuration = Date.now() - htmlStart;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] HTML generated successfully in ${htmlDuration}ms - Size: ${htmlContent.length} bytes`,
       );
 
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 4/6: Generating PDF from HTML`,
       );
       const pdfStart = Date.now();
       const pdfBuffer = await retryStep(
         async () => {
           try {
-            strapi.log.info(
+            console.log(
               `[ReportProcessor][Job:${jobId}] Generating PDF with PDF-Lib`,
             );
             const buffer = await this.pdfService.generate(htmlContent);
             
-            strapi.log.info(
+            console.log(
               `[ReportProcessor][Job:${jobId}] PDF generated successfully`,
             );
             
@@ -202,12 +202,12 @@ export class ReportProcessor extends WorkerHost {
         `[ReportProcessor][Job:${jobId}] PDF generation`,
       );
       const pdfDuration = Date.now() - pdfStart;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] PDF generated successfully in ${pdfDuration}ms - Size: ${pdfBuffer.length} bytes`,
       );
 
       const pdfFileName = `${stock.toLowerCase()}_report_${reportDate}.pdf`;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 5/6: Uploading PDF to S3`,
       );
 
@@ -227,7 +227,7 @@ export class ReportProcessor extends WorkerHost {
             throw new Error("S3 upload returned null or empty PDF URL");
           }
 
-          strapi.log.info(
+          console.log(
             `[ReportProcessor][Job:${jobId}] PDF uploaded to S3 - URL: ${url}`,
           );
           return url;
@@ -237,11 +237,11 @@ export class ReportProcessor extends WorkerHost {
         `[ReportProcessor][Job:${jobId}] S3 upload`,
       );
       const s3Duration = Date.now() - s3Start;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] S3 upload completed in ${s3Duration}ms`,
       );
 
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Step 6/6: Saving to database`,
       );
       const dbStart = Date.now();
@@ -261,23 +261,23 @@ export class ReportProcessor extends WorkerHost {
         `[ReportProcessor][Job:${jobId}] Database save`,
       );
       const dbDuration = Date.now() - dbStart;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] Database save successful in ${dbDuration}ms`,
       );
 
       if (email) {
-        strapi.log.info(
+        console.log(
           `[ReportProcessor][Job:${jobId}] All steps completed, sending email notification`,
         );
         await this.sendReportEmail(stock, reportDate, pdfUrl, email);
       } else {
-        strapi.log.info(
+        console.log(
           `[ReportProcessor][Job:${jobId}] All steps completed, no email provided - skipping notification`,
         );
       }
 
       const totalDuration = Date.now() - jobStartTime;
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][Job:${jobId}] ========== JOB COMPLETED SUCCESSFULLY in ${totalDuration}ms ==========`,
       );
       return { success: true, url: pdfUrl };
@@ -297,7 +297,7 @@ export class ReportProcessor extends WorkerHost {
     pdfUrl: string,
     email: string,
   ): Promise<void> {
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][Email] Preparing to send email - Stock: ${stock}, Recipient: ${email}, PDF URL: ${pdfUrl}`,
     );
 
@@ -311,7 +311,7 @@ export class ReportProcessor extends WorkerHost {
       }),
     };
 
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][Email] Template parameters prepared - Template ID: 354, Params:`,
       JSON.stringify(templateParams),
     );
@@ -327,7 +327,7 @@ export class ReportProcessor extends WorkerHost {
     
     await this.queueService.addTemplateEmailJob(email, 354, templateParams);
     const emailDuration = Date.now() - emailStart;
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][Email] Email job enqueued successfully in ${emailDuration}ms - Recipient: ${email}, Template: 354`,
     );
   }
@@ -356,22 +356,22 @@ export class ReportProcessor extends WorkerHost {
     const claimed = await this.dailyStockReportService.atomicClaimNotification(stock, reportDate);
     
     if (!claimed) {
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][API] Notification already sent for Stock: ${stock}, Date: ${reportDate} - Skipping duplicate notification`,
       );
       return;
     }
 
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][API] Notification claim successful - proceeding with API call for Stock: ${stock}, Date: ${reportDate}`,
     );
 
     const apiUrl = `${process.env.AI_STOCK_API_URL}/api/user-daily-stock-report`;
 
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][API] Starting API notification - Endpoint: ${apiUrl}`,
     );
-    strapi.log.info(
+    console.log(
       `[ReportProcessor][API] Payload - Email: ${email}, Stock: ${stock}, PDF URL: ${pdfUrl}`,
     );
 
@@ -390,7 +390,7 @@ export class ReportProcessor extends WorkerHost {
       });
       const apiDuration = Date.now() - apiStart;
 
-      strapi.log.info(
+      console.log(
         `[ReportProcessor][API] Notification sent successfully in ${apiDuration}ms - Stock: ${stock}, Email: ${email}, Status: ${response.status}, Response:`,
         JSON.stringify(response.data),
       );

@@ -1013,7 +1013,7 @@ export class StockReportHTMLGeneratorService {
       function checkAllChartsReady() {
         if (window.completedCharts >= window.totalCharts) {
           window.allChartsReady = true;
-          strapi.log.info('All charts rendered successfully');
+          console.log('All charts rendered successfully');
         }
       }
     `;

@@ -7,7 +7,7 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
   const dataSourceRepository = dataSource.getRepository(DataSource);
   const marketIndexRepository = dataSource.getRepository(MarketIndex);
 
-  strapi.log.info('Seeding exchanges...');
+  console.log('Seeding exchanges...');
   const exchanges = [
     { code: 'HOSE', name: 'Ho Chi Minh Stock Exchange' },
     { code: 'HNX', name: 'Hanoi Stock Exchange' },
@@ -18,9 +18,9 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
   const savedExchanges = await exchangeRepository.find({
     where: exchanges.map((exchange) => ({ code: exchange.code })),
   });
-  strapi.log.info(`  Upserted exchanges: ${exchanges.map((exchange) => exchange.code).join(', ')}`);
+  console.log(`  Upserted exchanges: ${exchanges.map((exchange) => exchange.code).join(', ')}`);
 
-  strapi.log.info('Seeding market indices...');
+  console.log('Seeding market indices...');
   const exchangeMap = new Map(savedExchanges.map((e) => [e.code, e.id]));
 
   const indices = [
@@ -38,9 +38,9 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     })),
     ['code'],
   );
-  strapi.log.info(`  Upserted indices: ${indices.map((index) => index.code).join(', ')}`);
+  console.log(`  Upserted indices: ${indices.map((index) => index.code).join(', ')}`);
 
-  strapi.log.info('Seeding data sources...');
+  console.log('Seeding data sources...');
   const dataSources = [
     {
       code: 'TCBS_API',
@@ -93,7 +93,7 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     })),
     ['code'],
   );
-  strapi.log.info(`  Upserted data sources: ${dataSources.map((source) => source.code).join(', ')}`);
+  console.log(`  Upserted data sources: ${dataSources.map((source) => source.code).join(', ')}`);
 
-  strapi.log.info('Seed completed successfully!');
+  console.log('Seed completed successfully!');
 }
