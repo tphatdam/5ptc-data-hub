@@ -39,10 +39,26 @@ async function bootstrap() {
       'A NestJS + Puppeteer service that generates PDF files from JSON data and creates Vietnamese stock analysis reports',
     )
     .addServer(getReplitDomain(), 'Development server')
+    // Add bearer token authentication for Swagger
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+        description: 'Enter JWT token in format: Bearer <token>',
+      },
+      'bearer', // This is the security name that can be referenced later
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('api-docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   const port = process.env.PORT || 5000;
   const host = '0.0.0.0';

@@ -593,7 +593,7 @@ export class IngestionService implements OnModuleInit {
   }
 
   private isDatahubMode(): boolean {
-    const mode = (this.configService.get<string>('unified.mode') || 'legacy').toLowerCase();
+    const mode = (this.configService.get<string>('unified.mode') || 'datahub').toLowerCase();
     return mode === 'datahub';
   }
 }

@@ -61,7 +61,7 @@ export class LegacyBackfillJob extends BaseJob {
       return false;
     }
 
-    const mode = (this.configService.get<string>('unified.mode') || 'legacy').toLowerCase();
+    const mode = (this.configService.get<string>('unified.mode') || 'datahub').toLowerCase();
     if (mode === 'datahub') {
       return false;
     }

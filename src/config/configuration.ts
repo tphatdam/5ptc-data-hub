@@ -23,7 +23,7 @@ export default () => ({
     timezone: process.env.SCHEDULE_TIMEZONE || 'Asia/Ho_Chi_Minh',
   },
   unified: {
-    mode: (process.env.UNIFIED_MODE || 'legacy').toLowerCase(),
+    mode: (process.env.UNIFIED_MODE || 'datahub').toLowerCase(),
     backfillEnabled: process.env.UNIFIED_BACKFILL_ENABLED === 'true',
     backfillBatchSize: parseInt(process.env.UNIFIED_BACKFILL_BATCH_SIZE || '500', 10),
     newsSourceMode: (process.env.UNIFIED_NEWS_SOURCE_MODE || 'daily-company').toLowerCase(),

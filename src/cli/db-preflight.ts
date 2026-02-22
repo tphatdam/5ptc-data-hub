@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { AppDataSource } from '../db/data-source';
 import { logPayload, toLogError } from '../common/logging/ingestion-log';
 
-const CORE_TABLES = ['symbols', 'quote_daily', 'quote_intraday'];
+const CORE_TABLES = ['data_source', 'exchange', 'symbol', 'stock_candle', 'job_run'];
 
 type TableRow = { table_name: string };
 type MigrationCountRow = { count: string };

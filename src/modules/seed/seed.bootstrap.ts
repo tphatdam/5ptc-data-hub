@@ -16,6 +16,12 @@ export class SeedBootstrapService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap(): Promise<void> {
+    const unifiedMode = (this.configService.get<string>('unified.mode') || 'datahub').toLowerCase();
+    if (unifiedMode === 'datahub') {
+      this.logger.info('Seed queue skipped (unified.mode=datahub)');
+      return;
+    }
+
     const runSeed = this.configService.get<boolean>('seed.run');
     if (!runSeed) {
       this.logger.info('Seed skipped (RUN_SEED=false)');

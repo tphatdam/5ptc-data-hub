@@ -33,7 +33,6 @@ import {
   JobRunService,
   UpsertService,
   LegacyBackfillService,
-  LegacyCompatViewService,
 } from './services';
 
 import {
@@ -89,7 +88,6 @@ const services = [
   JobRunService,
   UpsertService,
   LegacyBackfillService,
-  LegacyCompatViewService,
 ];
 
 const providers = [

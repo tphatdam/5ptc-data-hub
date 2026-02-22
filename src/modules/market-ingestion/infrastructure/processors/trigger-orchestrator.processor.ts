@@ -1,6 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import {
   TRIGGER_ORCHESTRATOR_QUEUE,
@@ -17,11 +16,9 @@ import {
   GapFillJob,
   GoldJob,
   IntradayMarketJob,
-  LegacyBackfillJob,
   NewsJob,
   SymbolSyncJob,
 } from '../../../data-hub/jobs';
-import { LegacyBackfillService } from '../../../data-hub/services/legacy-backfill.service';
 
 @Injectable()
 @Processor(TRIGGER_ORCHESTRATOR_QUEUE, { concurrency: 1 })
@@ -30,7 +27,6 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
 
   constructor(
     private readonly triggerRunService: TriggerRunService,
-    private readonly configService: ConfigService,
     private readonly symbolSyncJob: SymbolSyncJob,
     private readonly intradayMarketJob: IntradayMarketJob,
     private readonly eodDailyJob: EodDailyJob,
@@ -40,8 +36,6 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
     private readonly companyIntelJob: CompanyIntelJob,
     private readonly dailyCompanyCompositeJob: DailyCompanyCompositeJob,
     private readonly gapFillJob: GapFillJob,
-    private readonly legacyBackfillJob: LegacyBackfillJob,
-    private readonly legacyBackfillService: LegacyBackfillService,
   ) {
     super();
   }
@@ -115,42 +109,6 @@ export class TriggerOrchestratorProcessor extends WorkerHost {
           return { status: 'triggered' };
         }),
       );
-
-      stepStatuses.push(
-        await this.runStep(runId, sequence++, 'legacy-backfill', async () => {
-          await this.legacyBackfillJob.runNow();
-          return { status: 'triggered' };
-        }),
-      );
-
-      const batchSize =
-        this.configService.get<number>('unified.backfillBatchSize') ||
-        Number(process.env.UNIFIED_BACKFILL_BATCH_SIZE || '500');
-      const safeBatchSize = Number.isFinite(batchSize)
-        ? Math.max(1, Math.trunc(batchSize))
-        : 500;
-
-      for (;;) {
-        const status = await this.runStep(runId, sequence++, 'legacy-backfill', async () => {
-          const result = await this.legacyBackfillService.runBatch(safeBatchSize);
-          if (!result.taskName) {
-            return { status: 'skipped', reason: 'No pending backfill tasks' };
-          }
-          return {
-            status: 'triggered',
-            meta: {
-              taskName: result.taskName,
-              processed: result.processed,
-              batchSize: safeBatchSize,
-            },
-          };
-        });
-        stepStatuses.push(status);
-
-        if (status === TriggerRunStepStatus.SKIP) {
-          break;
-        }
-      }
 
       const failed = stepStatuses.filter((status) => status === TriggerRunStepStatus.FAIL).length;
       const skipped = stepStatuses.filter((status) => status === TriggerRunStepStatus.SKIP).length;

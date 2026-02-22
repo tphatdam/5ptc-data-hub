@@ -1,5 +1,4 @@
 import { Job } from 'bullmq';
-import { ConfigService } from '@nestjs/config';
 import { TriggerOrchestratorProcessor } from '../../../../src/modules/market-ingestion/infrastructure/processors/trigger-orchestrator.processor';
 import { TriggerRunService } from '../../../../src/modules/market-ingestion/application/services/trigger-run.service';
 import { TriggerRunStatus } from '../../../../src/db/entities';
@@ -21,9 +20,6 @@ describe('TriggerOrchestratorProcessor', () => {
 
     const processor = new TriggerOrchestratorProcessor(
       triggerRunService,
-      {
-        get: jest.fn((key: string) => (key === 'unified.backfillBatchSize' ? 10 : undefined)),
-      } as unknown as ConfigService,
       { runNow: jest.fn(async () => undefined) } as any,
       { runNow: jest.fn(async () => ({ status: 'triggered' })) } as any,
       { runNow: jest.fn(async () => undefined) } as any,
@@ -39,13 +35,6 @@ describe('TriggerOrchestratorProcessor', () => {
       { runNow: jest.fn(async () => ({ status: 'triggered' })) } as any,
       { runNow: jest.fn(async () => undefined) } as any,
       { runNow: jest.fn(async () => undefined) } as any,
-      { runNow: jest.fn(async () => undefined) } as any,
-      {
-        runBatch: jest
-          .fn()
-          .mockResolvedValueOnce({ taskName: 'symbols', processed: 100 })
-          .mockResolvedValueOnce({ taskName: null, processed: 0 }),
-      } as any,
     );
 
     return { processor, triggerRunService };
@@ -70,7 +59,7 @@ describe('TriggerOrchestratorProcessor', () => {
     } as Job<any>);
 
     expect(triggerRunService.markRunStarted).toHaveBeenCalledWith('run-1');
-    expect((triggerRunService.finishStep as jest.Mock).mock.calls.length).toBeGreaterThan(10);
+    expect((triggerRunService.finishStep as jest.Mock).mock.calls.length).toBe(10);
     expect(triggerRunService.markRunCompleted).toHaveBeenCalledWith(
       'run-1',
       TriggerRunStatus.PARTIAL,

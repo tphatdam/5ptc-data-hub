@@ -14,22 +14,15 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     { code: 'UPCOM', name: 'Unlisted Public Company Market' },
   ];
 
-  const savedExchanges: Exchange[] = [];
-  for (const exchange of exchanges) {
-    const existing = await exchangeRepository.findOne({ where: { code: exchange.code } });
-    if (!existing) {
-      const saved = await exchangeRepository.save(exchangeRepository.create(exchange));
-      savedExchanges.push(saved);
-      strapi.log.info(`  Created exchange: ${exchange.code}`);
-    } else {
-      savedExchanges.push(existing);
-      strapi.log.info(`  Exchange exists: ${exchange.code}`);
-    }
-  }
+  await exchangeRepository.upsert(exchanges, ['code']);
+  const savedExchanges = await exchangeRepository.find({
+    where: exchanges.map((exchange) => ({ code: exchange.code })),
+  });
+  strapi.log.info(`  Upserted exchanges: ${exchanges.map((exchange) => exchange.code).join(', ')}`);
 
   strapi.log.info('Seeding market indices...');
   const exchangeMap = new Map(savedExchanges.map((e) => [e.code, e.id]));
-  
+
   const indices = [
     { code: 'VNINDEX', name: 'VN Index', exchangeCode: 'HOSE' },
     { code: 'HNXINDEX', name: 'HNX Index', exchangeCode: 'HNX' },
@@ -37,21 +30,15 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     { code: 'VN30', name: 'VN30 Index', exchangeCode: 'HOSE' },
   ];
 
-  for (const index of indices) {
-    const existing = await marketIndexRepository.findOne({ where: { code: index.code } });
-    if (!existing) {
-      await marketIndexRepository.save(
-        marketIndexRepository.create({
-          code: index.code,
-          name: index.name,
-          exchangeId: exchangeMap.get(index.exchangeCode),
-        })
-      );
-      strapi.log.info(`  Created index: ${index.code}`);
-    } else {
-      strapi.log.info(`  Index exists: ${index.code}`);
-    }
-  }
+  await marketIndexRepository.upsert(
+    indices.map((index) => ({
+      code: index.code,
+      name: index.name,
+      exchangeId: exchangeMap.get(index.exchangeCode),
+    })),
+    ['code'],
+  );
+  strapi.log.info(`  Upserted indices: ${indices.map((index) => index.code).join(', ')}`);
 
   strapi.log.info('Seeding data sources...');
   const dataSources = [
@@ -99,15 +86,14 @@ export async function seedDatabase(dataSource: TypeOrmDataSource): Promise<void>
     },
   ];
 
-  for (const ds of dataSources) {
-    const existing = await dataSourceRepository.findOne({ where: { code: ds.code } });
-    if (!existing) {
-      await dataSourceRepository.save(dataSourceRepository.create(ds));
-      strapi.log.info(`  Created data source: ${ds.code}`);
-    } else {
-      strapi.log.info(`  Data source exists: ${ds.code}`);
-    }
-  }
+  await dataSourceRepository.upsert(
+    dataSources.map((source) => ({
+      ...source,
+      isActive: true,
+    })),
+    ['code'],
+  );
+  strapi.log.info(`  Upserted data sources: ${dataSources.map((source) => source.code).join(', ')}`);
 
   strapi.log.info('Seed completed successfully!');
 }
