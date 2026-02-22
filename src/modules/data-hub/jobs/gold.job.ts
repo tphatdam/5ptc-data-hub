@@ -32,6 +32,10 @@ export class GoldJob extends BaseJob {
     });
   }
 
+  async runNow(): Promise<void> {
+    await this.runWithLock({}, async () => this.execute());
+  }
+
   private async execute(): Promise<number> {
     const providerEntries = await this.providerFactory.getGoldProviderEntries();
     if (providerEntries.length === 0) {

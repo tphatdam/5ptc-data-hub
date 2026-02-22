@@ -9,7 +9,8 @@ import { QuotesModule } from '../quotes/quotes.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { CompanyDataModule } from '../company-data/company-data.module';
 import { SimplizeModule } from '../providers/simplize/simplize.module';
-import { DataHubModule } from '../data-hub/data-hub.module';
+import { MarketPricingModule } from '../market-pricing/market-pricing.module';
+import { MarketCompanyModule } from '../market-company/market-company.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { DataHubModule } from '../data-hub/data-hub.module';
     ProvidersModule,
     CompanyDataModule,
     SimplizeModule,
-    DataHubModule,
+    MarketPricingModule,
+    MarketCompanyModule,
   ],
   providers: [IngestionService, CrawlRunsRepository],
   exports: [IngestionService, CrawlRunsRepository],

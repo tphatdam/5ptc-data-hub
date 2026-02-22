@@ -5,11 +5,10 @@ import { IngestionLogMeta, logPayload, toLogError } from '../../common/logging/i
 import type {
   CompanyIntelForeignJobPayload,
   CompanyIntelInsiderJobPayload,
-} from '../data-hub/jobs/company-intel.types';
-import type {
   IntradayIndexJobPayload,
   IntradayStockJobPayload,
-} from '../data-hub/jobs/intraday-market.types';
+  TriggerRunAllJobPayload,
+} from './types';
 import {
   COMPANY_INTEL_FOREIGN_JOB,
   COMPANY_INTEL_INSIDER_JOB,
@@ -23,6 +22,8 @@ import {
   REPORT_JOB_GENERATE_STOCK,
   REPORT_QUEUE,
   SEED_QUEUE,
+  TRIGGER_ORCHESTRATOR_QUEUE,
+  TRIGGER_ORCHESTRATOR_RUN_ALL_JOB,
 } from './queue.constants';
 
 export interface QueueAddResult {
@@ -42,6 +43,8 @@ export class QueueService {
     private readonly marketIntradayQueue: Queue,
     @InjectQueue(COMPANY_INTEL_QUEUE)
     private readonly companyIntelQueue: Queue,
+    @InjectQueue(TRIGGER_ORCHESTRATOR_QUEUE)
+    private readonly triggerOrchestratorQueue: Queue,
   ) {}
 
   async addGenerateStockReportJob(stock: string, email?: string): Promise<void> {
@@ -259,6 +262,30 @@ export class QueueService {
     return job;
   }
 
+  async addTriggerRunAllJob(
+    payload: TriggerRunAllJobPayload,
+    options?: JobsOptions,
+  ): Promise<QueueAddResult> {
+    const jobId = options?.jobId || `${TRIGGER_ORCHESTRATOR_RUN_ALL_JOB}:${payload.runId}`;
+    return this.addWithLogging(
+      this.triggerOrchestratorQueue,
+      TRIGGER_ORCHESTRATOR_RUN_ALL_JOB,
+      payload,
+      {
+        removeOnComplete: true,
+        attempts: 1,
+        ...options,
+        jobId,
+      },
+      {
+        module: 'queue',
+        jobName: TRIGGER_ORCHESTRATOR_RUN_ALL_JOB,
+        queueName: TRIGGER_ORCHESTRATOR_QUEUE,
+      },
+      true,
+    );
+  }
+
   private resolveQueue(queueName: string): Queue {
     switch (queueName) {
       case REPORT_QUEUE:
@@ -271,6 +298,8 @@ export class QueueService {
         return this.marketIntradayQueue;
       case COMPANY_INTEL_QUEUE:
         return this.companyIntelQueue;
+      case TRIGGER_ORCHESTRATOR_QUEUE:
+        return this.triggerOrchestratorQueue;
       default:
         throw new Error(`Unsupported queue name: ${queueName}`);
     }

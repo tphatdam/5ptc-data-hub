@@ -36,6 +36,10 @@ export class FundamentalsJob extends BaseJob {
     });
   }
 
+  async runNow(): Promise<void> {
+    await this.runWithLock({}, async () => this.execute());
+  }
+
   private async execute(): Promise<number> {
     const activeSymbols = await this.symbolRepository.find({
       where: { isActive: true },

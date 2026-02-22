@@ -49,6 +49,19 @@ export class CompanyIntelJob extends BaseJob {
     await this.runWithLock({}, async () => this.execute('nightly_reconciliation'));
   }
 
+  async runNow(
+    mode: 'intraday_refresh' | 'nightly_reconciliation',
+  ): Promise<{ status: 'triggered' | 'skipped'; reason?: string }> {
+    if (mode === 'intraday_refresh' && !this.marketHoursService.isTradingTime()) {
+      const reason = 'Not trading hours';
+      await this.jobRunService.recordSkip(this.jobName, reason);
+      return { status: 'skipped', reason };
+    }
+
+    await this.runWithLock({}, async () => this.execute(mode));
+    return { status: 'triggered' };
+  }
+
   private async execute(mode: 'intraday_refresh' | 'nightly_reconciliation'): Promise<number> {
     const startedAt = Date.now();
     const now = new Date();

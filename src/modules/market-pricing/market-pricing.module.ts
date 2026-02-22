@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { QuotesModule } from '../quotes/quotes.module';
+import { DataHubModule } from '../data-hub/data-hub.module';
 
 @Module({
-  imports: [QuotesModule],
-  exports: [QuotesModule],
+  imports: [DataHubModule],
+  exports: [DataHubModule],
 })
 export class MarketPricingModule {}

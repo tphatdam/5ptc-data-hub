@@ -5,4 +5,4 @@ import { DataHubModule } from '../data-hub/data-hub.module';
   imports: [DataHubModule],
   exports: [DataHubModule],
 })
-export class MarketReferenceModule {}
+export class MarketContentModule {}

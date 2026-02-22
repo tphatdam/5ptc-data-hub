@@ -31,6 +31,7 @@ describe('QueueService', () => {
       seedQueue as unknown as Queue,
       marketQueue as unknown as Queue,
       companyQueue as unknown as Queue,
+      createQueueMock('triggerOrchestratorQueue') as unknown as Queue,
     );
 
     return { service, companyQueue };

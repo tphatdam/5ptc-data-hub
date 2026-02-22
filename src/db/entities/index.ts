@@ -8,3 +8,5 @@ export { StockRelatedPeer } from './stock-related-peer.entity';
 export { CompanySubsidiary } from './company-subsidiary.entity';
 export { NewsArticle } from './news-article.entity';
 export { CompanyReport } from './company-report.entity';
+export { TriggerRun, TriggerRunStatus } from './trigger-run.entity';
+export { TriggerRunStep, TriggerRunStepStatus } from './trigger-run-step.entity';

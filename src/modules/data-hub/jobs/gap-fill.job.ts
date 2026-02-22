@@ -42,6 +42,10 @@ export class GapFillJob extends BaseJob {
     });
   }
 
+  async runNow(): Promise<void> {
+    await this.runWithLock({}, async () => this.execute());
+  }
+
   private async execute(): Promise<number> {
     const tradingDays = this.marketHoursService.getLastNTradingDays(2);
     if (tradingDays.length === 0) {

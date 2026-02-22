@@ -7,6 +7,15 @@ describe('RunQuoteHourlyUseCase', () => {
     runQuoteHourly: jest.fn(async () => undefined),
     runDailyCompany: jest.fn(async () => undefined),
     runDailyEod: jest.fn(async () => undefined),
+    runAllTriggers: jest.fn(async () => ({ runId: 'run-id', acceptedAt: new Date().toISOString(), mode: 'full' as const })),
+    getTriggerRunStatus: jest.fn(async () => ({
+      runId: 'run-id',
+      status: 'QUEUED',
+      startedAt: null,
+      finishedAt: null,
+      summary: { totalSteps: 0, success: 0, failed: 0, skipped: 0 },
+      steps: [],
+    })),
   };
 
   let useCase: RunQuoteHourlyUseCase;

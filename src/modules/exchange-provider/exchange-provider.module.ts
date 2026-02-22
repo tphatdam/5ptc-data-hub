@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { CompanyDataModule } from '../company-data/company-data.module';
-import { CompanyIntelModule } from '../company-intel/company-intel.module';
-import { DataHubModule } from '../data-hub/data-hub.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
+import { LegacyTransitionModule } from '../legacy-transition/legacy-transition.module';
+import { MarketCompanyModule } from '../market-company/market-company.module';
+import { MarketContentModule } from '../market-content/market-content.module';
+import { MarketCoreModule } from '../market-core/market-core.module';
 import { MarketIngestionModule } from '../market-ingestion/market-ingestion.module';
 import { MarketPricingModule } from '../market-pricing/market-pricing.module';
 import { MarketReferenceModule } from '../market-reference/market-reference.module';
@@ -21,9 +23,11 @@ import { SymbolsModule } from '../symbols/symbols.module';
     SymbolsModule,
     MarketReferenceModule,
     MarketPricingModule,
-    CompanyIntelModule,
+    MarketCompanyModule,
+    MarketContentModule,
+    MarketCoreModule,
+    LegacyTransitionModule,
     MarketIngestionModule,
-    DataHubModule,
   ],
   exports: [
     ProvidersModule,
@@ -34,9 +38,11 @@ import { SymbolsModule } from '../symbols/symbols.module';
     SymbolsModule,
     MarketReferenceModule,
     MarketPricingModule,
-    CompanyIntelModule,
+    MarketCompanyModule,
+    MarketContentModule,
+    MarketCoreModule,
+    LegacyTransitionModule,
     MarketIngestionModule,
-    DataHubModule,
   ],
 })
 export class ExchangeProviderModule {}
