@@ -4,7 +4,7 @@ Domain-oriented NestJS structure. Feature code lives under `modules/`; shared ke
 
 ## Root
 
-- `main.ts`, `app.module.ts`, `strapi-shim.ts` — entry and app wiring
+- `main.ts`, `app.module.ts` — entry and app wiring
 - `config/` — configuration and env validation
 - `common/` — shared guards, logging, S3, etc.
 - `db/` — TypeORM entities, migrations, data-source
@@ -19,20 +19,17 @@ All feature modules are under `modules/<name>/`.
 |--------|------|
 | `ai` | OpenAI service and controller |
 | `brevo` | Email (Brevo) |
-| `company-data` | Company/report/news repositories (TypeORM) |
-| `company-intel` | Thin re-export of company-data |
-| `data-hub` | Jobs, providers, entities (TCBS, intraday, etc.) |
+| `data-hub` | Canonical data-hub entities, jobs, providers, seed orchestration |
 | `exchange-provider` | Canonical aggregation module for exchange-data runtime |
 | `health` | Health check controller |
-| `ingestion` | Core ingestion service and crawl runs |
+| `market-company` | Company/intel facade over data-hub runtime |
+| `market-content` | News/content facade over data-hub runtime |
+| `market-core` | Shared market orchestration wiring |
 | `market-ingestion` | Trigger API and use cases (application/domain/infrastructure/presentation) |
-| `market-pricing` | Thin re-export of quotes |
-| `market-reference` | Thin re-export of symbols |
+| `market-pricing` | Pricing facade over data-hub runtime |
+| `market-reference` | Symbol/reference facade over data-hub runtime |
 | `providers` | HTTP client, VCI, Simplize, market provider interface |
 | `queue` | Bull/BullMQ queues and processors |
-| `quotes` | Quote daily/intraday repositories |
 | `reporting` | PDF and daily stock report (PdfModule + DailyStockReportModule) |
-| `seed` | Symbol seeding (CLI and queue processor) |
-| `symbols` | Symbols repository |
 
 The `/triggers` API is served by `market-ingestion` (v1-compat and v2 controllers).

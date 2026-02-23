@@ -18,6 +18,7 @@ export abstract class BaseJob {
     options: {
       requireTradingHours?: boolean;
       scheduledFor?: Date;
+      rethrowOnError?: boolean;
     },
     executor: () => Promise<number>
   ): Promise<void> {
@@ -48,6 +49,9 @@ export abstract class BaseJob {
             error.message
           );
           this.logger.error(`${this.jobName} failed: ${error.message}`, error.stack);
+          if (options.rethrowOnError) {
+            throw error;
+          }
           return { skipped: false, error: error.message };
         }
       },

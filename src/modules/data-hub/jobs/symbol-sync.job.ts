@@ -37,7 +37,7 @@ export class SymbolSyncJob extends BaseJob {
   }
 
   async runNow(): Promise<void> {
-    await this.runWithLock({}, async () => this.execute());
+    await this.runWithLock({ rethrowOnError: true }, async () => this.execute());
   }
 
   private async execute(): Promise<number> {

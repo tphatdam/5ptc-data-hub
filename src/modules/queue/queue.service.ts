@@ -21,7 +21,6 @@ import {
   MARKET_INTRADAY_STOCK_JOB,
   REPORT_JOB_GENERATE_STOCK,
   REPORT_QUEUE,
-  SEED_QUEUE,
   TRIGGER_ORCHESTRATOR_QUEUE,
   TRIGGER_ORCHESTRATOR_RUN_ALL_JOB,
 } from './queue.constants';
@@ -38,7 +37,6 @@ export class QueueService {
   constructor(
     @InjectQueue(REPORT_QUEUE) private readonly reportQueue: Queue,
     @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
-    @InjectQueue(SEED_QUEUE) private readonly seedQueue: Queue,
     @InjectQueue(MARKET_INTRADAY_QUEUE)
     private readonly marketIntradayQueue: Queue,
     @InjectQueue(COMPANY_INTEL_QUEUE)
@@ -292,8 +290,6 @@ export class QueueService {
         return this.reportQueue;
       case EMAIL_QUEUE:
         return this.emailQueue;
-      case SEED_QUEUE:
-        return this.seedQueue;
       case MARKET_INTRADAY_QUEUE:
         return this.marketIntradayQueue;
       case COMPANY_INTEL_QUEUE:

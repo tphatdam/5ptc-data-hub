@@ -12,4 +12,3 @@ export * from './company-intel.job';
 export * from './company-intel.processor';
 export * from './company-intel.types';
 export * from './daily-company-composite.job';
-export * from './legacy-backfill.job';

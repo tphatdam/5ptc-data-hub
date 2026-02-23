@@ -18,7 +18,6 @@ describe('QueueService', () => {
   function createService(companyQueueOverrides?: Partial<ReturnType<typeof createQueueMock>>) {
     const reportQueue = createQueueMock('reportQueue');
     const emailQueue = createQueueMock('emailQueue');
-    const seedQueue = createQueueMock('seedQueue');
     const marketQueue = createQueueMock('marketIntradayQueue');
     const companyQueue = {
       ...createQueueMock(COMPANY_INTEL_QUEUE),
@@ -28,7 +27,6 @@ describe('QueueService', () => {
     const service = new QueueService(
       reportQueue as unknown as Queue,
       emailQueue as unknown as Queue,
-      seedQueue as unknown as Queue,
       marketQueue as unknown as Queue,
       companyQueue as unknown as Queue,
       createQueueMock('triggerOrchestratorQueue') as unknown as Queue,

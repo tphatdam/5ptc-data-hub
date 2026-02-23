@@ -1,12 +1,14 @@
 import { createHash } from 'crypto';
-import { BulkUpsertCompanyReportDto } from '../../company-data/company-report.repository';
-import { BulkUpsertCompanySubsidiaryDto } from '../../company-data/company-subsidiary.repository';
-import { BulkUpsertForeignTradingDailyDto } from '../../company-data/foreign-trading-daily.repository';
-import { BulkUpsertInsiderTradingEventDto } from '../../company-data/insider-trading-event.repository';
-import { BulkUpsertNewsArticleDto } from '../../company-data/news-article.repository';
-import { BulkUpsertStockRelatedPeerDto } from '../../company-data/stock-related-peer.repository';
-import { BulkUpsertQuoteDailyDto } from '../../quotes/quote-daily.repository';
-import { BulkUpsertQuoteIntradayDto } from '../../quotes/quote-intraday.repository';
+import {
+  BulkUpsertCompanyReportDto,
+  BulkUpsertCompanySubsidiaryDto,
+  BulkUpsertForeignTradingDailyDto,
+  BulkUpsertInsiderTradingEventDto,
+  BulkUpsertNewsArticleDto,
+  BulkUpsertQuoteDailyDto,
+  BulkUpsertQuoteIntradayDto,
+  BulkUpsertStockRelatedPeerDto,
+} from './mappers.types';
 
 const SOURCE = 'SIMPLIZE';
 

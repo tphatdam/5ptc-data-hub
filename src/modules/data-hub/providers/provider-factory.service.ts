@@ -41,8 +41,7 @@ export class ProviderFactoryService {
   private loadDefaultProviderChain(): string[] {
     const configured =
       this.configService.get<string>('dataHub.providerFallbackChain') ||
-      process.env.DATA_HUB_PROVIDER_FALLBACK_CHAIN ||
-      'VCI_API,TCBS_API,MSN_API';
+      'TCBS_API,SIMPLIZE_API';
 
     return configured
       .split(',')

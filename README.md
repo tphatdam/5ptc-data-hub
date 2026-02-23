@@ -41,8 +41,10 @@ cp .env.example .env
 # Edit .env and fill in your actual values:
 # - DATABASE_URL (PostgreSQL; add ?sslmode=require or set DATABASE_SSL=true for SSL)
 # - REDIS_URL (e.g. redis://localhost:6379 for local)
-# - AWS S3 credentials and bucket name
+# - AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET
 # - API keys (OpenAI, Sendinblue)
+# - DATA_HUB_PROVIDER_FALLBACK_CHAIN (optional, default: TCBS_API,SIMPLIZE_API)
+# - SEED_ON_STARTUP=true|false
 ```
 
 3. Run database migrations:
@@ -58,15 +60,14 @@ Migration note:
 - It includes a preflight check to block dirty bootstrap states.
 - For container/runtime image use `npm run migration:run:prod`.
 
-4. (Optional) Seed the database with initial data:
-
-```bash
-npm run db:seed
-```
+4. Startup seed runs automatically on app startup (`main.ts`):
+   - Reference seed (`exchange`, `market_index`, `data_source`) then symbol sync.
+   - Runs with advisory lock to avoid duplicate runs across instances.
+   - Disable with `SEED_ON_STARTUP=false` if needed.
 
 Useful DB commands:
 
-- `npm run migration:undo`: revert the latest migration.
+- `npm run migration:revert`: revert the latest migration.
 - `npm run db:clear`: drop and recreate `public` schema (requires `DB_CLEAR_CONFIRM=YES`).
 
 ### Development Tools
@@ -143,7 +144,7 @@ npm run build
 npm run start:prod
 ```
 
-Production bootstrap (migration + start + async bootstrap seed):
+Production bootstrap (migration + start):
 
 ```bash
 docker build -t exchange-provider .
@@ -155,8 +156,7 @@ Container entrypoint flow:
 1. `node dist/cli/db-preflight.js`
 2. `npm run migration:run:prod`
 3. `node dist/main`
-4. Wait for `/health`
-5. Run `npm run seed:bootstrap:prod` in background (non-blocking)
+4. `main.ts` triggers startup seed automatically (non-blocking)
 
 Debug mode:
 

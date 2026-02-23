@@ -1,16 +1,49 @@
-import './strapi-shim';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Logger as PinoLogger } from 'nestjs-pino';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { StartupSeedService } from './modules/data-hub/services/startup-seed.service';
 import { getReplitDomain } from './utils/file.utils';
+
+function runSeedOnStartup(app: INestApplication, logger: Logger): void {
+  const configService = app.get(ConfigService);
+  const runOnStart = configService.get<boolean>('seed.runOnStart');
+  if (runOnStart === false) {
+    logger.log('Startup seed skipped (SEED_ON_STARTUP=false)');
+    return;
+  }
+
+  let startupSeedService: StartupSeedService;
+  try {
+    startupSeedService = app.get(StartupSeedService, { strict: false });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.warn(`Startup seed unavailable, skipping: ${message}`);
+    return;
+  }
+
+  logger.log('Startup seed triggered');
+  void startupSeedService
+    .runOnStartup()
+    .then(() => {
+      logger.log('Startup seed completed');
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`Startup seed failed (continuing): ${message}`);
+    });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
     logger: ['log', 'error', 'warn', 'debug'],
   });
+  app.useLogger(app.get(PinoLogger));
 
   const logger = new Logger('Bootstrap');
 
@@ -104,6 +137,7 @@ async function bootstrap() {
   logger.log(`5PTC Data hub service running on port ${port}`);
   logger.log(`Swagger documentation available at ${getReplitDomain()}/api-docs`);
   logger.log('Server ready - browser will initialize on first PDF request');
+  runSeedOnStartup(app, logger);
 }
 
 bootstrap().catch((err) => {

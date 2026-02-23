@@ -6,7 +6,7 @@ import {
   TriggerRunStatus,
   TriggerRunStep,
   TriggerRunStepStatus,
-} from '../../../../db/entities';
+} from '../../infrastructure/entities';
 import { TriggerRunStatusDto } from '../dto/trigger-run-status.dto';
 
 @Injectable()

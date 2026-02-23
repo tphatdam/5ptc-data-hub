@@ -1,26 +1,32 @@
 import { Injectable } from '@nestjs/common';
-import { IngestionService } from '../../../ingestion/ingestion.service';
 import { MarketIngestionPort } from '../../domain/ports/market-ingestion.port';
 import { TriggerRunStatusDto } from '../../application/dto/trigger-run-status.dto';
 import { TriggerOrchestratorService } from '../services/trigger-orchestrator.service';
+import {
+  DailyCompanyCompositeJob,
+  EodDailyJob,
+  IntradayMarketJob,
+} from '../../../data-hub/jobs';
 
 @Injectable()
-export class LegacyMarketIngestionAdapter implements MarketIngestionPort {
+export class DataHubMarketIngestionAdapter implements MarketIngestionPort {
   constructor(
-    private readonly ingestionService: IngestionService,
+    private readonly intradayMarketJob: IntradayMarketJob,
+    private readonly dailyCompanyCompositeJob: DailyCompanyCompositeJob,
+    private readonly eodDailyJob: EodDailyJob,
     private readonly triggerOrchestratorService: TriggerOrchestratorService,
   ) {}
 
-  runQuoteHourly(): Promise<void> {
-    return this.ingestionService.runQuoteHourly();
+  async runQuoteHourly(): Promise<void> {
+    await this.intradayMarketJob.runNow();
   }
 
-  runDailyCompany(): Promise<void> {
-    return this.ingestionService.runDailyCompany();
+  async runDailyCompany(): Promise<void> {
+    await this.dailyCompanyCompositeJob.runNow();
   }
 
-  runDailyEod(): Promise<void> {
-    return this.ingestionService.runDailyEOD();
+  async runDailyEod(): Promise<void> {
+    await this.eodDailyJob.runNow();
   }
 
   runAllTriggers(): Promise<{ runId: string; acceptedAt: string; mode: 'full' }> {

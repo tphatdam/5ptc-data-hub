@@ -78,7 +78,6 @@ export class DataHubController {
       'SymbolSyncJob',
       'GapFillJob',
       'DailyCompanyCompositeJob',
-      'LegacyBackfillJob',
     ];
 
     const statuses = await Promise.all(

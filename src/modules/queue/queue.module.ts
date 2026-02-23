@@ -11,7 +11,6 @@ import {
   EMAIL_QUEUE,
   MARKET_INTRADAY_QUEUE,
   REPORT_QUEUE,
-  SEED_QUEUE,
   TRIGGER_ORCHESTRATOR_QUEUE,
 } from './queue.constants';
 import { QueueService } from './queue.service';
@@ -47,7 +46,6 @@ class QueueConnectionLogger implements OnModuleInit {
   constructor(
     @InjectQueue(REPORT_QUEUE) private readonly reportQueue: Queue,
     @InjectQueue(EMAIL_QUEUE) private readonly emailQueue: Queue,
-    @InjectQueue(SEED_QUEUE) private readonly seedQueue: Queue,
     @InjectQueue(MARKET_INTRADAY_QUEUE) private readonly marketIntradayQueue: Queue,
     @InjectQueue(COMPANY_INTEL_QUEUE) private readonly companyIntelQueue: Queue,
     @InjectQueue(TRIGGER_ORCHESTRATOR_QUEUE)
@@ -58,7 +56,6 @@ class QueueConnectionLogger implements OnModuleInit {
     await Promise.all([
       this.observeQueueConnection(this.reportQueue),
       this.observeQueueConnection(this.emailQueue),
-      this.observeQueueConnection(this.seedQueue),
       this.observeQueueConnection(this.marketIntradayQueue),
       this.observeQueueConnection(this.companyIntelQueue),
       this.observeQueueConnection(this.triggerOrchestratorQueue),
@@ -150,7 +147,6 @@ class QueueConnectionLogger implements OnModuleInit {
     BullModule.registerQueue(
       { name: REPORT_QUEUE },
       { name: EMAIL_QUEUE },
-      { name: SEED_QUEUE },
       { name: MARKET_INTRADAY_QUEUE },
       { name: COMPANY_INTEL_QUEUE },
       { name: TRIGGER_ORCHESTRATOR_QUEUE },

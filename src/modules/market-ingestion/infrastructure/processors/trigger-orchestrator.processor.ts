@@ -7,7 +7,7 @@ import {
 } from '../../../queue/queue.constants';
 import { TriggerRunAllJobPayload } from '../../../queue/types';
 import { TriggerRunService } from '../../application/services/trigger-run.service';
-import { TriggerRunStatus, TriggerRunStepStatus } from '../../../../db/entities';
+import { TriggerRunStatus, TriggerRunStepStatus } from '../entities';
 import {
   CompanyIntelJob,
   DailyCompanyCompositeJob,

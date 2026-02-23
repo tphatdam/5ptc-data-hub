@@ -22,12 +22,12 @@ export default () => ({
     dailyCompanyCron: process.env.DAILY_COMPANY_CRON || '0 18 * * *',
     timezone: process.env.SCHEDULE_TIMEZONE || 'Asia/Ho_Chi_Minh',
   },
+  dataHub: {
+    providerFallbackChain:
+      process.env.DATA_HUB_PROVIDER_FALLBACK_CHAIN || 'TCBS_API,SIMPLIZE_API',
+  },
   unified: {
-    mode: (process.env.UNIFIED_MODE || 'datahub').toLowerCase(),
-    backfillEnabled: process.env.UNIFIED_BACKFILL_ENABLED === 'true',
-    backfillBatchSize: parseInt(process.env.UNIFIED_BACKFILL_BATCH_SIZE || '500', 10),
     newsSourceMode: (process.env.UNIFIED_NEWS_SOURCE_MODE || 'daily-company').toLowerCase(),
-    legacyCompatViewsEnabled: process.env.UNIFIED_LEGACY_COMPAT_VIEWS_ENABLED === 'true',
   },
   simplize: {
     baseUrl: process.env.SIMPLIZE_BASE_URL || 'https://api2.simplize.vn',
@@ -42,14 +42,6 @@ export default () => ({
       .filter(Boolean),
   },
   seed: {
-    run: process.env.RUN_SEED === 'true',
-    source: process.env.SEED_SOURCE || 'sstock',
-    fallback: process.env.SEED_FALLBACK !== 'false',
-    sstockBaseUrl: process.env.SSTOCK_BASE_URL || 'https://api-feature.sstock.vn',
-    sstockCookie: process.env.SSTOCK_COOKIE,
-    httpTimeoutMs: parseInt(process.env.SEED_HTTP_TIMEOUT_MS || '20000', 10),
-    httpRetries: parseInt(process.env.SEED_HTTP_RETRIES || '4', 10),
-    batchSize: parseInt(process.env.SEED_BATCH_SIZE || '300', 10),
-    advisoryLockKey: parseInt(process.env.SEED_ADVISORY_LOCK_KEY || '987654321', 10),
+    runOnStart: process.env.SEED_ON_STARTUP !== 'false',
   },
 });

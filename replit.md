@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - `GET /data-hub/metrics`: Symbol and candle counts
 - `GET /data-hub/jobs/status`: Job execution history
 
-**Commands**: `npm run db:seed` populates exchanges, indices, and data sources.
+**Commands**: startup seed now runs automatically in `main.ts` (`SEED_ON_STARTUP=false` to disable). Provider chain order can be controlled with `DATA_HUB_PROVIDER_FALLBACK_CHAIN`.
 
 **January 12, 2026**: Redesigned GET /daily-stock-report/:stockCode API endpoint with "get today's report if exists, else create placeholder and enqueue background job" pattern. Key changes: (1) Made `url` column nullable in DailyStockReportEntity to support placeholder rows; (2) Added `status` field to response DTO with 'PENDING' or 'READY' values; (3) Implemented `getOrCreateToday()` method using Asia/Ho_Chi_Minh timezone via date-fns-tz; (4) Uses createQueryBuilder with string date parameters for timezone-safe idempotent queries; (5) Updated report processor and queue service to handle optional email (skips notifications when email not provided); (6) Added 12 unit tests covering idempotency, normalization, and status handling. The unique index on (stock, reportDate) prevents duplicate placeholders at database level.
 

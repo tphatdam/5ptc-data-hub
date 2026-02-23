@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
+import type { DestinationStream } from 'pino';
 import { AiModule } from './modules/ai/ai.module';
 import { HealthModule } from './modules/health/health.module';
 import { BrevoModule } from './modules/brevo/brevo.module';
@@ -56,17 +57,18 @@ import { ExchangeProviderModule } from './modules/exchange-provider/exchange-pro
       },
     }),
     ScheduleModule.forRoot(),
-    LoggerModule.forRoot({
-      pinoHttp:
-        process.env.NODE_ENV === 'production'
-          ? {}
-          : {
-              transport: {
-                target: 'pino-pretty',
-                options: { singleLine: true },
-              },
-            },
-    }),
+    LoggerModule.forRoot(
+      (() => {
+        if (process.env.NODE_ENV === 'production') {
+          return { pinoHttp: {} };
+        }
+        // Synchronous stream to stdout so logs always appear in the main process terminal (no worker transport)
+        const pinoPretty = require('pino-pretty');
+        const stream = pinoPretty({ singleLine: true });
+        stream.pipe(process.stdout);
+        return { pinoHttp: [{ level: 'debug' }, stream as DestinationStream] };
+      })(),
+    ),
     QueueModule,
     BrevoModule,
     ReportingModule,

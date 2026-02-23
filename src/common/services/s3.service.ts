@@ -7,6 +7,7 @@ import { Upload } from '@aws-sdk/lib-storage';
 export class S3Service {
   private s3Client: S3Client;
   private bucketName: string;
+  private uploadEnabled: boolean;
 
   constructor(private configService: ConfigService) {
     const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
@@ -14,20 +15,28 @@ export class S3Service {
     const secretAccessKey = this.configService.get<string>(
       'AWS_SECRET_ACCESS_KEY',
     );
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME') || '';
-
-    if (!accessKeyId || !secretAccessKey || !this.bucketName) {
+    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET') || '';
+    const missingEnv: string[] = [];
+    if (!accessKeyId) missingEnv.push('AWS_ACCESS_KEY_ID');
+    if (!secretAccessKey) missingEnv.push('AWS_SECRET_ACCESS_KEY');
+    if (!this.bucketName) missingEnv.push('AWS_S3_BUCKET');
+    this.uploadEnabled = missingEnv.length === 0;
+    if (!this.uploadEnabled) {
       console.warn(
-        'AWS credentials or bucket name not configured. S3 upload will fail.',
+        `S3 upload disabled. Missing configuration: ${missingEnv.join(', ')}`,
       );
     }
 
     this.s3Client = new S3Client({
       region,
-      credentials: {
-        accessKeyId: accessKeyId || '',
-        secretAccessKey: secretAccessKey || '',
-      },
+      ...(accessKeyId && secretAccessKey
+        ? {
+            credentials: {
+              accessKeyId,
+              secretAccessKey,
+            },
+          }
+        : {}),
     });
   }
 
@@ -37,6 +46,10 @@ export class S3Service {
     contentType: string = 'text/html',
   ): Promise<string> {
     try {
+      if (!this.uploadEnabled) {
+        throw new Error('S3 upload is disabled due to missing AWS configuration');
+      }
+
       const key = `reports/${fileName}`;
 
       const uploadParams = {
