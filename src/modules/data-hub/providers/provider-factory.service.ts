@@ -17,6 +17,7 @@ import {
 } from './interfaces';
 import { ProviderRegistryService } from './provider-registry.service';
 import { SimplizeProvider } from './simplize.provider';
+import { SStockProvider } from './sstock.provider';
 
 export type ProviderEntry<TProvider extends AnyDataProvider> = RegisteredProvider<TProvider>;
 
@@ -32,16 +33,18 @@ export class ProviderFactoryService {
     private readonly providerRegistry: ProviderRegistryService,
     private readonly tcbsProvider: TcbsProvider,
     private readonly simplizeProvider: SimplizeProvider,
+    private readonly sstockProvider: SStockProvider,
   ) {
     this.defaultProviderChain = this.loadDefaultProviderChain();
     this.registerProvider('TCBS_API', this.tcbsProvider);
     this.registerProvider('SIMPLIZE_API', this.simplizeProvider);
+    this.registerProvider('SSTOCK_API', this.sstockProvider);
   }
 
   private loadDefaultProviderChain(): string[] {
     const configured =
       this.configService.get<string>('dataHub.providerFallbackChain') ||
-      'TCBS_API,SIMPLIZE_API';
+      'TCBS_API,SSTOCK_API,SIMPLIZE_API';
 
     return configured
       .split(',')

@@ -8,6 +8,7 @@ import { AdvisoryLockService } from '../services/advisory-lock.service';
 import { MarketHoursService } from '../services/market-hours.service';
 import { DynamicProviderAdapter } from '../providers/dynamic-provider.adapter';
 import { ProviderFactoryService } from '../providers/provider-factory.service';
+import { SymbolInfo } from '../providers/interfaces';
 import { Symbol, Exchange } from '../entities';
 
 @Injectable()
@@ -46,16 +47,46 @@ export class SymbolSyncJob extends BaseJob {
       throw new Error('No symbol list provider available');
     }
 
-    const symbolListFetch = await this.providerAdapter.invokeSymbolList(
-      'fetchSymbolList',
-      [],
-      providerEntries.map((entry) => entry.code),
-    );
-    const symbolList = symbolListFetch.value;
-    if (symbolList.length === 0) {
-      this.logger.warn('No symbols returned from provider');
-      return 0;
+    const providerCodes = providerEntries.map((entry) => entry.code);
+    let symbolList: SymbolInfo[] = [];
+    let selectedProviderCode: string | null = null;
+    const failures: string[] = [];
+
+    for (const providerCode of providerCodes) {
+      try {
+        const result = await this.providerAdapter.invokeSymbolList(
+          'fetchSymbolList',
+          [],
+          [providerCode],
+        );
+
+        if (!Array.isArray(result.value) || result.value.length === 0) {
+          failures.push(`${providerCode}: empty`);
+          this.logger.warn(
+            `Symbol list provider ${providerCode} returned empty list, trying next provider`,
+          );
+          continue;
+        }
+
+        symbolList = result.value;
+        selectedProviderCode = result.providerCode;
+        break;
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        failures.push(`${providerCode}: ${message}`);
+        this.logger.warn(`Symbol list provider ${providerCode} failed, trying next provider: ${message}`);
+      }
     }
+
+    if (symbolList.length === 0) {
+      throw new Error(
+        `No symbols returned from providers (${providerCodes.join(', ')}). Failures: ${failures.join(' | ')}`,
+      );
+    }
+
+    this.logger.log(
+      `Symbol list selected provider: ${selectedProviderCode} (${symbolList.length} symbols)`,
+    );
 
     const exchanges = await this.exchangeRepository.find();
     const exchangeCodeToId = new Map(exchanges.map((e) => [e.code, e.id]));

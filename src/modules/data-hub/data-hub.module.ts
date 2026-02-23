@@ -39,6 +39,7 @@ import {
   ProviderFactoryService,
   DynamicProviderAdapter,
   SimplizeProvider,
+  SStockProvider,
 } from './providers';
 
 import {
@@ -91,6 +92,7 @@ const providers = [
   ProviderFactoryService,
   DynamicProviderAdapter,
   SimplizeProvider,
+  SStockProvider,
 ];
 
 const jobs = [

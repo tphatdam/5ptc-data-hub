@@ -24,7 +24,9 @@ export default () => ({
   },
   dataHub: {
     providerFallbackChain:
-      process.env.DATA_HUB_PROVIDER_FALLBACK_CHAIN || 'TCBS_API,SIMPLIZE_API',
+      process.env.DATA_HUB_PROVIDER_FALLBACK_CHAIN || 'TCBS_API,SSTOCK_API,SIMPLIZE_API',
+    sstockBaseUrl: process.env.SSTOCK_BASE_URL || 'https://api-feature.sstock.vn',
+    sstockCookie: process.env.SSTOCK_COOKIE,
   },
   unified: {
     newsSourceMode: (process.env.UNIFIED_NEWS_SOURCE_MODE || 'daily-company').toLowerCase(),

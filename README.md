@@ -43,7 +43,8 @@ cp .env.example .env
 # - REDIS_URL (e.g. redis://localhost:6379 for local)
 # - AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET
 # - API keys (OpenAI, Sendinblue)
-# - DATA_HUB_PROVIDER_FALLBACK_CHAIN (optional, default: TCBS_API,SIMPLIZE_API)
+# - DATA_HUB_PROVIDER_FALLBACK_CHAIN (optional, default: TCBS_API,SSTOCK_API,SIMPLIZE_API)
+# - SSTOCK_BASE_URL / SSTOCK_COOKIE (optional for SStock symbol fallback)
 # - SEED_ON_STARTUP=true|false
 ```
 
