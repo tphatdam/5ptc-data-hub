@@ -21,6 +21,7 @@ import {
   StockRelatedPeer,
   CompanySubsidiary,
   CompanyReport,
+  StockFinancialStatementFact,
 } from './entities';
 
 import {
@@ -74,6 +75,7 @@ const entities = [
   StockRelatedPeer,
   CompanySubsidiary,
   CompanyReport,
+  StockFinancialStatementFact,
 ];
 
 const services = [

@@ -13,3 +13,4 @@ export { CompanyReport } from './company-report.entity';
 export { GoldPrice } from './gold-price.entity';
 export { NewsArticle } from './news-article.entity';
 export { JobRun } from './job-run.entity';
+export { StockFinancialStatementFact } from './stock-financial-statement-fact.entity';

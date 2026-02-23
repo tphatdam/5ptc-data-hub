@@ -55,6 +55,38 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   INTERNAL_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  VN_STOCK_API_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  VIETSTOCK_BASE?: string;
+
+  @IsOptional()
+  @IsString()
+  VIETSTOCK_COOKIE?: string;
+
+  @IsOptional()
+  @IsString()
+  FIREANT_BASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  FIREANT_TOKEN?: string;
+
+  @IsOptional()
+  @IsString()
+  AI_CRAWLER_API_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  VNDIRECT_BASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  PAYMENT_AMOUNT?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

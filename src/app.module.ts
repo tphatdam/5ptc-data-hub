@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -14,6 +15,9 @@ import configuration from './config/configuration';
 import { getDatabaseSslOption } from './config/database-url';
 import { validate } from './config/validate-env';
 import { ExchangeProviderModule } from './modules/exchange-provider/exchange-provider.module';
+import { AgentDataModule } from './modules/agent-data/agent-data.module';
+import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { CacheModule } from './common/cache/cache.module';
 
 @Module({
   imports: [
@@ -75,6 +79,14 @@ import { ExchangeProviderModule } from './modules/exchange-provider/exchange-pro
     AiModule,
     HealthModule,
     ExchangeProviderModule,
+    AgentDataModule,
+    CacheModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ApiKeyGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {

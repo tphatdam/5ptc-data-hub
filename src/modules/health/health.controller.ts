@@ -43,4 +43,24 @@ export class HealthController {
   getHealth() {
     return { status: 'ok', service: 'pdf-generator' };
   }
+
+  @Get('api/health')
+  @ApiOperation({
+    summary: 'API health check (public, no x-api-key required)',
+    description: 'Same as /health for compatibility with frontend',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service is running properly',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'ok' },
+        service: { type: 'string', example: 'pdf-generator' },
+      },
+    },
+  })
+  getApiHealth() {
+    return { status: 'ok', service: 'pdf-generator' };
+  }
 }

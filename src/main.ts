@@ -5,7 +5,8 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { ApiExceptionFilter } from './common/filters/api-exception.filter';
+import { ApiLoggingInterceptor } from './common/interceptors/api-logging.interceptor';
 import { StartupSeedService } from './modules/data-hub/services/startup-seed.service';
 import { getReplitDomain } from './utils/file.utils';
 
@@ -56,7 +57,8 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new ApiExceptionFilter());
+  app.useGlobalInterceptors(new ApiLoggingInterceptor());
 
   app.use((req: Request, _res: Response, next: NextFunction) => {
     if (req.is('json')) {
@@ -66,10 +68,10 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('PDF Generator API')
+    .setTitle('5PTC Data Hub API')
     .setVersion('1.0.0')
     .setDescription(
-      'A NestJS + Puppeteer service that generates PDF files from JSON data and creates Vietnamese stock analysis reports',
+      'Data Hub API: Vietnamese stock analysis, PDF reports, and API compatibility layer for frontend. All /api/* routes require header x-api-key (INTERNAL_API_KEY). Public: GET /health, GET /api/health.',
     )
     .addServer(getReplitDomain(), 'Development server')
     // Add bearer token authentication for Swagger
@@ -89,7 +91,7 @@ async function bootstrap() {
         type: 'apiKey',
         name: 'x-api-key',
         in: 'header',
-        description: 'Internal API key for triggers (INTERNAL_API_KEY)',
+        description: 'API key for /api/* routes (INTERNAL_API_KEY). Required for all endpoints except /health and /api/health.',
       },
       'apiKey',
     )
